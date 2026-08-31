@@ -119,6 +119,24 @@ exported symbol, versioned by the schema constant it exports.
   walks. It needs no file of its own: it is a read-only traversal of
   `BookDocument` with no state and no dependencies.
 
+## Paths Inside An EPUB Are URLs, Not File Paths
+
+Binding on everything under `epub/`: resolve manifest hrefs, spine references and
+navigation targets with the `p.url` context of `package:path` — `p.url.join`,
+`p.url.normalize` — never the top-level functions of the same names.
+
+The top-level functions use the current platform's context. Zip entry names are
+always `/`-separated, so on Windows `p.join('OPS', 'ch1.xhtml')` produces
+`OPS\ch1.xhtml` and `p.normalize('OPS/../images/x.png')` produces
+`images\x.png`. Neither matches any entry in the archive, so href resolution
+fails outright — every chapter, every image, the cover — and it fails only on
+Windows, silently, on a machine the author probably is not using.
+
+The package is pure Dart precisely so it can run on servers and in CLI tools
+([public-api.md](public-api.md)), which puts Windows inside the supported set.
+`p.extension` on a file path from the caller is unaffected and stays top-level;
+the rule is about paths read out of the container.
+
 ## test/ And example/ Are Not Optional
 
 `test/fixtures/` holds a small golden book per real-world variant — EPUB 2 with

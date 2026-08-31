@@ -291,6 +291,36 @@ collection it can become a fixture, and it carries a second `<body name="notes">
 with a link into it from the text — the shape `SC-14` needs. It is UTF-8; it was
 supplied as a windows-1251 sample and is not one.
 
+### Images By Byte, Not By Count
+
+Measured 2026-09-01, when `OQ-15` needed a unit the table above does not carry.
+The counts say how many books hold images; the decision turned on how much of a
+book an image is. Re-measured over 247 files matching `*.fb2`/`*.fb2.zip` in the
+local collection — more than the 211 surveyed on 2026-08-31, since the directory
+has grown and holds a few duplicates, so treat these as proportions rather than
+as a second census.
+
+| Measure | Value |
+| --- | --- |
+| Files with any `<binary>` | 242 of 247 (98%) |
+| Files with **inline** (non-cover) images | 113 (**46%**) |
+| base64 share of the raw FB2 text | median 13.6%, p90 80.5%, max 95.7% |
+| inline-only share | median **0%**, p90 73.2%, max 94.3% |
+| raw FB2 bytes ÷ the `.fb2.zip` on disk | median 2.9×, p90 3.3× |
+| Worst case | 328 images, ~15 MB of base64, 94% of the file |
+
+**The distribution is bimodal, and no count could have shown it.** Half the
+collection carries a cover and nothing else; the other half is mostly picture.
+"98% carry binaries" reads as though nearly every book is affected by an
+image-embedding decision, and in bytes 54% of them are not affected at all. The
+same measurement in the other direction: a plain novel with only a cover is
+already 20–30% base64, so "median 1 image" is not the same as "negligible".
+
+This is what closed
+[ADR-20260901T101800Z](../adr/ADR-20260901T101800Z-images-encoded-by-reference.md),
+and the survey scripts in `corpus/` should grow a byte mode so the number is
+reproducible rather than quoted from here.
+
 ## What These Numbers Change
 
 - **Tables are not the risk they looked like.** Two books of 211 contain any, four
@@ -309,6 +339,11 @@ supplied as a windows-1251 sample and is not one.
   current behaviour.
 - **Inline images matter more than a variant nothing produced suggested.** 98% of
   FB2 books carry binaries, and one carries 660. `DEC-10` is not a formality.
+  Read by byte the same fact is sharper and differently shaped: only 46% carry an
+  image that is not the cover, but where they do it is a median 73% of the file at
+  the top decile. See [Images By Byte, Not By Count](#images-by-byte-not-by-count)
+  — and do not quote the 98% in an argument about size, which is what happened
+  before the byte measurement existed.
 - **`<annotation>` and `<sequence>` are nearly universal**, and both are excluded
   from `BookMetadata` in `0.1.0`. The decision to wait until someone asks stands,
   but the wait is likely to be short: 96% and 98% of books carry them.

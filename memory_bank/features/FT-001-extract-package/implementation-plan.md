@@ -52,6 +52,18 @@ it is four, verified against the source on 2026-08-31.
 | `lib/src/presentation/widgets/reader/book_paginator.dart`, `page_disk_cache.dart`, `screens/reader.dart`, `widgets/reader/reader_paragraph.dart` | the only writers and readers of `spillBefore`/`spillAfter`/`wholeSentence()` | they define the app-side refactor `DEC-05` implies | app keeps its own paginated block type |
 | every TeaderBook call site of the parsers | current consumers | they define what the migration must keep working | switched to the package import in `STEP-07` |
 
+`readtolearn/frontend/` is not recorded anywhere else in this repository, which
+holds no code and no reference to the app. Locally, verified 2026-08-31:
+
+```
+/Users/admin/Documents/docs/__projects/__my/readtolearn/frontend
+```
+
+This is a fact about one machine rather than about the project — it is written
+here only because `STEP-01` cannot start without it, and it stops being true the
+moment the work moves to another checkout. The four source locations above sit
+under `lib/src/` and total 916 lines, counted rather than estimated.
+
 ## Test Strategy
 
 | Test surface | Canonical refs | Existing coverage | Planned automated coverage | Required local suites | Manual-only gap |
@@ -60,14 +72,22 @@ it is four, verified against the source on 2026-08-31.
 | archive handling | `SC-02`, `CHK-01` | `test/book_archive_test.dart` (131 lines), zips built inline | `.fb2.zip` vs unpacked `.fb2` equality | `dart test` | none |
 | format detection | `SC-03`, `CHK-01` | none in package form | wrong / absent extension routed by magic bytes | `dart test` | none |
 | failure paths | `NEG-01`, `CHK-01` | none in package form | corrupt fixture returns `Err`, never throws | `dart test` | none |
+| DRM and font obfuscation | `NEG-01`, `CHK-01` | none | generated fixtures: an `encryption.xml` naming a content document yields `drmProtected`; one naming a font resource parses normally | `dart test` | whether a real ADEPT file behaves the same — the corpus has none |
+| empty and image-only documents | `SC-09`, `CHK-01` | none | a document with no blocks anywhere returns `emptyDocument`; an image-only book parses and its `bodySample` is `''` | `dart test` | none |
 | lazy segmentation | `SC-05`, `CHK-01` | none | assert segmentation has not run before the getter is touched | `dart test` | none |
+| equality | `SC-01`, `CHK-01` | none | `Sentence` and `Word` behave as values in a `Set`; the paragraph-level types and `BookMetadata` do not, so the asymmetry is pinned rather than assumed | `dart test` | none |
 | inline images | `SC-09`, `NEG-02`, `CHK-01` | none — no parser emits `ImageBlock` today | illustrated book of each format yields typed image blocks in order; unresolvable image skipped, book still parses | `dart test` | none |
-| metadata path stays cheap | `SC-10`, `CHK-01` | none — the guarantee came from `epubx.openBook` and is now ours | `parseMetadata` on a many-chapter book does not inflate chapter entries | `dart test` | none |
+| metadata path stays cheap | `SC-10`, `CHK-01` | none — the guarantee came from `epubx.openBook` and is now ours | instrumented, and now symmetric: `parseMetadata` builds no block content and materialises no manifest entry or `<binary>` but the cover, in **both** formats. For FB2 that means asserting the event reader never reaches the body | `dart test` | none |
 | isolate transport | `SC-11`, `CHK-01` | none | parse inside `Isolate.run`, including with a caller-supplied segmenter, and read the result back | `dart test` | none |
-| cache round trip | `SC-12`, `CHK-01` | `test/book_document_codec_test.dart` (64 lines) | parse, encode, decode, assert segmentation matches the original | `dart test` | none |
-| metadata invariant | `SC-13`, `CHK-01` | none — the two paths were never compared | `parse().metadata` equals `parseMetadata()` field by field, both formats, cover bytes asserted separately | `dart test` | none |
+| cache round trip | `SC-12`, `CHK-01` | `test/book_document_codec_test.dart` (64 lines) | parse, encode, decode with the returned image map, assert segmentation matches the original; plus an illustrated document decoded with an empty map returning `null` rather than a document with holes | `dart test` | none |
+| metadata invariant | `SC-13`, `CHK-01` | none — the two paths were never compared | `parse().metadata` equals `parseMetadata()` field by field, both formats, cover bytes asserted separately. Carries more weight for FB2 than the row suggests: with a DOM path and an event path it is the only guard on the two agreeing, so it runs over the four derived encoding fixtures as well as the goldens | `dart test` | none |
 | flattened constructs, note bodies | `SC-14`, `CHK-01` | none | table, list, verse and quotation yield their text as paragraphs in order; FB2 `<body name="notes">` yields trailing chapters | `dart test` | whether the flattened text still reads like the book — the corpus pass |
 | chapter list and depth | `SC-15`, `CHK-01` | none | nested navigation flattens to reading order with `level` set, both formats | `dart test` | none |
+| no synthetic headings | `SC-18`, `CHK-01` | none — the source does the opposite, and injects one | an EPUB with no heading tags yields no `HeadingBlock`; the navigation label appears only in `Chapter.title` | `dart test` | none |
+| archive layer, all cases | `SC-19`, `CHK-01` | one case, in `test/book_archive_test.dart` | each of the five `ArchiveContent` cases produced and distinguished | `dart test` | none |
+| language normalisation | `SC-20`, `CHK-01` | none | BCP-47 subtag reduction, ISO-639-1 acceptance, fallback for anything else | `dart test` | none |
+| encoded shape pinned | `SC-21`, `CHK-01` | none | golden encoded document asserted against `kBookDocumentSchemaVersion` | `dart test` | none |
+| the whole corpus parses | `CHK-07`, `STOP-04` | none — the corpus has only ever been surveyed, never parsed | 186 EPUB and 211 FB2 parsed: no throw, no `ParseErr`, chapter and block counts recorded | local corpus runner, not CI | which files parse *well* rather than merely without error — spot-read against the survey's structure counts |
 | pure-Dart resolution | `SC-06`, `CHK-02` | none | scratch project resolve + test | `dart pub get`, `dart test` | none |
 | decoupling | `SC-07`, `CHK-03` | none | grep gate over `lib/` | `CHK-03` command | none |
 | TeaderBook migration | `SC-08`, `CHK-06` | app suite exists | app suite green with local copy deleted | app test suite | none |
@@ -87,6 +107,18 @@ needs deliberately corrupt inputs, which do not exist today.
 | --- | --- | --- | --- | --- |
 | `OQ-02` | Is `ebook_parser` still free on pub.dev at publish time? | Checked twice on 2026-08-31: `GET /api/packages/ebook_parser` returns 404, and a search for the name returns eight packages, none of them it. Free, but pub.dev does not reserve names (`CON-01`), so the answer holds for today and not for publication day | `STEP-06` | `dart pub publish --dry-run` in `STEP-05` re-confirms; a taken name reopens [ADR-20260830T161251Z](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md). |
 
+Confirmed 2026-08-31 against pub.dev's own policy: there is no reservation
+mechanism at all, and publishing a placeholder to hold the name is prohibited
+outright — "Packages may not be published solely to reserve a name for future
+use." So the only instrument that would close `OQ-02` early is bringing
+`STEP-06` forward onto a genuinely working `0.1.0`, which the Ordering
+Constraints currently forbid. Left as it is by decision; the question is
+recorded, not acted on.
+
+This is the only open question left. The five raised by the architecture review
+of 2026-08-31 were settled as `STEP-00d` on 2026-09-01 and are in the table
+below.
+
 ### Closed
 
 | ID | Question | Answer |
@@ -102,6 +134,11 @@ needs deliberately corrupt inputs, which do not exist today.
 | `OQ-12`, `OQ-13` | The table-of-contents page, and unnavigated spine items generally | Rule 2 stands — unnavigated documents become untitled chapters — with one exception for a spine item the format declares to be the table of contents: [ADR-20260831T184812Z](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md). Closed on the retail Baen file, where six of seven unnavigated documents are real front matter and the seventh is a declared contents page. |
 | `OQ-11` | EPUB chapter granularity | One chapter per navigation entry, splitting a spine item at its anchors: [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md). Closed from the `STEP-00b` corpus, where the producers disagreed — Standard Ebooks prose loses nothing at spine granularity and its own poetry edition loses 674 of 718 entries. |
 | `OQ-10` | `sampleTextOf` | Stays exported as the extension `BookDocument.bodySample`; recorded in [public-api.md](../../engineering/public-api.md). |
+| `OQ-14` | The complete set of `ParseFailureKind` | Closed at five, adding `drmProtected`: [ADR-20260901T101600Z](../../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md). `unsupportedVersion` rejected — no consumer action differs from `unsupportedFormat`. The load-bearing part is that an `encryption.xml` alone is not DRM: it also carries font obfuscation, and testing for the file rather than for what it encrypts would refuse readable books. |
+| `OQ-15` | Does the JSON codec carry image bytes? | No. Images are encoded by reference and the bytes handed back to the caller: [ADR-20260901T101800Z](../../adr/ADR-20260901T101800Z-images-encoded-by-reference.md). Closed on measurement — 247 local FB2 files re-measured by byte, where base64 binaries are a median 13.6% of the file and up to 95.7%, and only 46% of books carry any inline image at all. For an illustrated book, embedding makes the cache's hit path more expensive than its miss path. |
+| `OQ-16` | Do the model's value types define `==`? | `Sentence` and `Word` only; every other type keeps identity with a recorded reason: [ADR-20260901T101500Z](../../adr/ADR-20260901T101500Z-value-equality-on-spans-only.md). |
+| `OQ-17` | What is an `emptyDocument`, and are empty chapters dropped? | No `Block` in any chapter, not "no text" — so an image-only book parses; empty chapters are dropped, keeping `Chapter.index` dense: [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md). |
+| `OQ-18` | Is the FB2 metadata path allowed to read the whole file? | No — it streams with `parseEvents` to `<description>` and then to the one `<binary>` the coverpage names, so `parseMetadata` is cheap for both formats: [ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md). The cost accepted is a second FB2 reading path, guarded by `SC-13`. |
 
 ## Work Order
 
@@ -133,6 +170,14 @@ needs deliberately corrupt inputs, which do not exist today.
   decision. Golden fixtures come only from the public-domain files, since
   `dart pub publish` ships `test/` and the local collection's provenance does not
   support redistribution.
+- `STEP-00d` (`OQ-14`..`OQ-18`) — **Done 2026-09-01.** A third decision pass,
+  closing the five questions the architecture review found in the seams between
+  accepted ADRs. Four were genuine compatibility promises that had to be settled
+  before `0.1.0` — the failure enum, model equality, the encoded form, and what
+  `emptyDocument` means. The fifth, the FB2 metadata cost, was not a contract and
+  could have waited; it was taken now anyway rather than publishing a method whose
+  name promises what it does not deliver for one of two formats.
+
 - `STEP-01` (`REQ-01`) — Copy the code from all four source locations named in
   Current State into the layout owned by
   [`../../engineering/architecture.md`](../../engineering/architecture.md), then clean imports:
@@ -168,17 +213,32 @@ needs deliberately corrupt inputs, which do not exist today.
   tables row by row, lists item by item, line breaks as newlines inside a
   paragraph rather than as paragraph splits, and FB2 note bodies as trailing
   chapters. Check the note-bodies rule against what the source FB2 parser does
-  today; if it differs, record the deviation in `brief.md` under `NS-03`.
-- `STEP-02` (`REQ-02`) — Write `ParseResult<T>` and `ParseFailure` with the four
-  causes, and switch the copied code onto them. Not a dependency on the app's
+  today; if it differs, record the deviation in `brief.md` under `NS-03`. This
+  step also carries the event-based FB2 metadata reader
+  ([ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md)):
+  a `parseEvents` state machine that captures `<description>` and then skips to
+  the single `<binary>` the coverpage names, so `parseMetadata` never builds a DOM
+  over the body. It is a second FB2 reading path beside the DOM one `parse` uses,
+  and the two must agree — which is what `SC-13` now guards rather than merely
+  documents.
+- `STEP-02` (`REQ-02`) — Write `ParseResult<T>` and `ParseFailure` with the five
+  causes — `corrupt`, `unsupportedFormat`, `encoding`, `emptyDocument`,
+  `drmProtected` — and switch the copied code onto them. The set is closed for the
+  major version, so a sixth is a breaking change rather than an addition. Not a dependency on the app's
   `Result<T>`, and not exceptions on expected errors — the latter would be a
   regression against current behaviour.
 - `STEP-03` (`REQ-01`) — Build the fixtures: builders in code for the contract
   tests and for generated corrupt inputs, plus three golden files (EPUB 2 with
   NCX, EPUB 3 with nav, FB2 in windows-1251) and one illustrated book per format.
+  Two more generated containers are needed and will not come from the corpus,
+  which holds no `encryption.xml` at all: one encrypting a content document and
+  one obfuscating a font.
   Write the suites from the Test Strategy table. Set up CI — `dart analyze`,
-  `dart test`, `dart pub publish --dry-run` on push. Gate: `CHK-01`, evidence
-  `EVID-01`, `EVID-06`.
+  `dart test`, `dart pub publish --dry-run` on push. Add the corpus runner
+  alongside the survey scripts in `corpus/`: it parses every local file and
+  reports failures and counts, runs locally rather than in CI because the corpus
+  is `.gitignore`d, and is what makes `STOP-04` a condition rather than a wish.
+  Gate: `CHK-01`, `CHK-07`, evidence `EVID-01`, `EVID-06`, `EVID-08`.
 - `STEP-04` (`REQ-03`) — Verify pure-Dart consumption in a scratch project with
   no Flutter SDK. Gate: `CHK-02`, evidence `EVID-02`.
 - `STEP-05` (`REQ-01`, `DEC-01`) — Write the README: how the package differs from
@@ -199,13 +259,28 @@ needs deliberately corrupt inputs, which do not exist today.
     `spillBefore`/`spillAfter` and `wholeSentence` (`DEC-05`), and the four files
     that read or write them updated onto it;
   - `page_disk_cache.dart` rewritten on the package's block codec instead of its
-    own (`DEC-06`), and its cache version bumped;
+    own (`DEC-06`), and its cache version bumped. It inherits the two-part shape:
+    `encodeBlock` hands back image bytes separately, so the app stores them as
+    files beside the json rather than base64 inside it, which is the opposite of
+    what its current codec does at `book_document_codec.dart:71`;
   - cover resizing at import with the platform image codec, and the parse-cache
     version bumped (`DEC-04`);
   - the declared language narrowed to the app's catalog at the import call site,
     with a test (`DEC-03`);
   - display call sites moved onto the nested metadata: `authors` joined for
     display and a fallback supplied where `title` is null (`DEC-13`);
+  - **reading positions migrated or deliberately reset** (`DEC-17`). The brief
+    already records that chapter counts change and that index-keyed positions are
+    invalidated, but no step owned it, and this is the one item on this list that
+    is user data rather than a cache. A parse cache can be dropped silently; a
+    reader that loses everyone's place in every book on an update cannot. Either
+    map old index to new by matching chapter titles, or reset with a version
+    marker and accept it knowingly — but not by omission;
+  - the reader's chapter headings, if the UI renders blocks alone (`DEC-11`).
+    The app shows a synthetic level-1 heading at the top of most chapters today
+    because the source injects one; the package does not. Where the UI needs it,
+    it renders `Chapter.title` itself. On a Calibre-produced novel this is thirty
+    headings appearing or vanishing, so it is a visible change, not a detail;
   - five direct dependencies dropped from the app's `pubspec.yaml` — `archive`,
     `epubx`, `image`, `html`, `enough_convert` — because each is imported only by
     files that leave with the package. `epubx` and `archive` must go in the same
@@ -238,7 +313,10 @@ the feature.
 - `STOP-04` — The corpus of real EPUB files shows the reader failing on a whole
   producer's output (Calibre, a major catalogue, an old EPUB 2 toolchain): fix
   before `STEP-05`, since the README's differentiation claim rests on the reader
-  being at least as good as what it replaced.
+  being at least as good as what it replaced. The mechanism is `CHK-07`: until
+  the review of 2026-08-31 this stop condition had none, because the corpus was
+  only ever read by a survey script that counts structure and never calls the
+  parser. A stop condition nothing can trigger is decoration.
 - `STOP-03` — TeaderBook's suite cannot go green against the package at
   `STEP-07`: do not delete the local copy and do not close the feature. A
   behaviour difference means `NS-03` was violated somewhere upstream, which is

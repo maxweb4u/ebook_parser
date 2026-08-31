@@ -101,6 +101,39 @@ Break the rule and nothing fails at the segmenter. It fails at the caller's
 That is why the constraint is recorded on the model rather than left to whoever
 writes an implementation.
 
+## Equality Is Settled For Every Type
+
+`Sentence` and `Word` define `==` and `hashCode` over their fields — `Sentence`
+comparing `text`, `start`, `end` and its `words` element-wise, `Word` comparing
+`text`, `start` and `end`. Both are bounded by one sentence, so the operator
+costs what the value in front of the caller suggests it costs.
+
+**No other exported type defines `==`.** Each compares by identity, and the
+reason differs per type rather than being one blanket rule
+([ADR-20260901T101500Z](../adr/ADR-20260901T101500Z-value-equality-on-spans-only.md)):
+
+| Type | Why identity |
+| --- | --- |
+| `ImageData` | The bytes are unbounded and the walk would be invisible |
+| `ImageBlock` | Holds an `ImageData`, so any `==` would compare it by identity — a value-looking comparison that is not one |
+| `ParagraphBlock` | Holds a consumer-supplied `TextSegmenter`, which has no equality contract of its own |
+| `HeadingBlock` | Could have one; withheld so `List<Block>` comparison has a single semantics across the sealed family |
+| `BookMetadata` | Holds the cover: comparing it walks megabytes, skipping it calls two different books equal |
+| `Chapter`, `BookDocument` | A deep `==` walks the whole book |
+
+`HeadingBlock` is the one row where the answer is uniformity rather than a
+property of the type, and it is written that way rather than dressed up.
+
+The asymmetry is deliberate and has to be documented rather than discovered: a
+consumer who finds `Sentence ==` working will reasonably expect
+`ParagraphBlock ==` to work too. Every type that keeps identity says so in its
+doc comment.
+
+Settling this before `0.1.0` was the point. Equality cannot be added quietly
+later — it changes how `Set` and `Map` behave for every consumer already written
+against identity, so the second version would silently do something different
+from the first rather than failing to compile.
+
 ## What A Paragraph Does Not Hold
 
 No pagination state. A paragraph carries its text and its segmentation, never

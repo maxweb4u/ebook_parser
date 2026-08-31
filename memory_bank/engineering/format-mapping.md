@@ -78,6 +78,20 @@ anchor that resolves to nothing drops its entry rather than failing the parse, a
 anchor on an inline element splits before its enclosing block, and an entry
 pointing outside the spine is ignored.
 
+A chapter that ends up with no blocks at all is dropped rather than emitted, so
+`Chapter.index` stays dense and equal to the chapter's position in the list
+([ADR-20260901T101700Z](../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md)).
+This does not compete with the rule above that keeps unnavigated spine items:
+that one decides which documents become chapters, this one decides that a chapter
+with nothing in it earns no entry in the contents. A spine item holding a
+full-page image has an `ImageBlock` and survives both — which is why a
+fixed-layout book parses rather than vanishing.
+
+A document in which *no* chapter has any block is refused as `emptyDocument`.
+That is a stricter test than the source's, which asks for readable **text** and
+would therefore refuse every comic; a chapter holding a single `ImageBlock` is
+content here.
+
 ## Block Content
 
 Both readers produce only `ParagraphBlock`, `HeadingBlock` and `ImageBlock`.
@@ -104,6 +118,15 @@ Both readers produce only `ParagraphBlock`, `HeadingBlock` and `ImageBlock`.
 Chapter XHTML is parsed with `html`, not with `xml`: real books do not guarantee
 well-formed XML ([public-api.md](public-api.md) records why the dependency
 exists).
+
+`HeadingBlock` is empty on many real EPUBs, and this belongs in the README rather
+than in a consumer's debugging session. Publishers carry heading semantics in CSS
+classes, which the package never reads: the retail Baen file in
+[corpus-findings.md](corpus-findings.md) has one `<h1>`–`<h6>` tag against 6 822
+`<p>` tags, and all thirty of its chapter headings are `<p class="chapter">`. On
+such a book every chapter title arrives through `Chapter.title` and none through
+a block. A consumer that renders blocks alone and expects headings among them
+gets a wall of undifferentiated prose — so render `Chapter.title` yourself.
 
 ### FB2
 
@@ -138,8 +161,16 @@ differs, and they are listed rather than tested for parity.
 | --- | --- |
 | FB2 marks verse, epigraphs and subtitles explicitly; EPUB expresses them in CSS the package never reads | An EPUB epigraph is indistinguishable from a paragraph without reading a stylesheet |
 | FB2 note texts arrive as trailing chapters; EPUB note texts are ordinary spine items | Both end up as chapters, by different routes |
-| EPUB has an inline navigation heading heuristic; FB2 has none | Only EPUB duplicates a navigation label as an inline heading ([`DEC-11`](../features/FT-001-extract-package/brief.md)) |
+| An FB2 `<title>` becomes both `Chapter.title` and a `HeadingBlock`; an EPUB navigation label becomes `Chapter.title` only | FB2 marks the title inside the section, so the heading is in the document. EPUB's label lives in the navigation, outside the content, and synthesising a block from it would be inventing text ([`DEC-11`](../features/FT-001-extract-package/brief.md)) |
 | An EPUB cover may be SVG; an FB2 cover is always a raster `<binary>` | Format difference, surfaced through `mediaType` |
+| `drmProtected` is reachable for EPUB only | FB2 has no encryption concept; there is nothing to detect |
+
+`parseMetadata`'s cost used to be on this list — cheap for EPUB and, as written,
+O(file) for FB2. It is not an asymmetry any more: the FB2 metadata reader streams
+to the cover instead of building a DOM over the body
+([ADR-20260901T101900Z](../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md)),
+so the method means the same thing for both formats. What that costs instead is
+two FB2 reading paths that must agree, which `SC-13` is what guards.
 
 ## Not Extracted, Either Format
 
@@ -150,7 +181,21 @@ differs, and they are listed rather than tested for parity.
 - Page-break hints, and anything else describing layout — the model excludes
   pagination by decision
   ([ADR-20260831T135225Z](../adr/ADR-20260831T135225Z-model-excludes-pagination.md)).
-- EPUB 3 media overlays, and EPUB encryption of any kind.
-- DRM. A DRM-protected book is not decrypted and parses as corrupt.
+- EPUB 3 media overlays.
+- DRM. A protected book is not decrypted and is refused as `drmProtected`
+  ([ADR-20260901T101600Z](../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md)),
+  which is a distinct failure kind precisely because a locked book is intact and
+  "damaged file" is the wrong thing to tell its owner. Detection is the
+  container's own declaration — `META-INF/encryption.xml` covering publication
+  resources, or `META-INF/rights.xml` — and needs no decryption.
 - A table-of-contents page the book declares as such. Only a declaration counts;
   a contents page that is merely recognisable stays.
+
+**Encryption is not the same as DRM, and the distinction is load-bearing.** The
+same `META-INF/encryption.xml` also carries font obfuscation, which protects a
+typeface rather than the book. The package reads neither fonts nor CSS, so such a
+book is parsed normally with nothing missing from the model. A reader that tests
+for the file's presence rather than for what it encrypts refuses well-produced
+books that are perfectly readable. No file in the fetched corpus carries an
+`encryption.xml` at all, so this rule rests on the OCF specification rather than
+on evidence from the collection, and generated fixtures cover both branches.

@@ -126,6 +126,16 @@ version, so any change to the encoded shape fails until the version moves with i
 - TeaderBook composes both versions in its cache header and rewrites
   `page_disk_cache.dart` on top of the package codec, in `STEP-07`.
 
+## Superseded In Part
+
+The size argument above reasons entirely about sentence spans and does not
+mention images — `DEC-10` made `ImageBlock` a variant both readers produce an
+hour later by timestamp. What the encoded form does with image bytes is decided
+by [ADR-20260901T101800Z](ADR-20260901T101800Z-images-encoded-by-reference.md),
+which keeps them out of the json and hands them to the caller. The separate-library
+decision recorded here is unaffected; only the encode and decode signatures
+changed.
+
 ## Related Links
 
 - [domain/model.md](../domain/model.md) — the shape being encoded, and why

@@ -20,3 +20,4 @@ DNA is the constitution of the project documentation. It defines principles, doc
 - [Document Lifecycle](lifecycle.md) — maintenance rules and sync checklist.
 - [Cross-references](cross-references.md) — rules for two-way code ↔ docs navigation.
 - [Memory Bank Changelog](changelog.md) — versioned changes, migration notes, and compatibility rules for memory-bank upgrades.
+- [Query Vocabulary](vocabulary.md) — Russian stems this project uses and their English equivalents, so a question asked in Russian reaches documents written in English.

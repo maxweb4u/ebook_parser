@@ -50,13 +50,16 @@ TeaderBook back on top of it. The full inventory is owned by
 - `NS-02` No rendering, pagination, or reader UI.
 - `NS-03` No behaviour change by default. Parsing results after the switch match
   what TeaderBook produces today; this is an extraction, not an improvement.
-  Eight accepted decisions cannot honour this literally — `DEC-03` (language
+  Twelve accepted decisions cannot honour this literally — `DEC-03` (language
   resolution stops consulting the app's catalog), `DEC-04` (covers are no longer
   re-encoded), `DEC-05` (pagination fields leave the model), `DEC-10` (inline
-  images start being extracted), `DEC-13` (metadata moves off `BookDocument` and
+  images start being extracted), `DEC-11` (the navigation title is no longer
+  injected as a heading), `DEC-13` (metadata moves off `BookDocument` and
   `author` becomes a list), `DEC-14` (FB2 note bodies stop being skipped),
-  `DEC-17` (EPUB chapter counts follow the navigation) and `DEC-18` (unnavigated
-  front matter starts being returned) each change something the app observes.
+  `DEC-17` (EPUB chapter counts follow the navigation), `DEC-18` (unnavigated
+  front matter starts being returned), `DEC-20` (one failure kind becomes five),
+  `DEC-21` (an image-only book parses where the app refuses it) and `DEC-22` (the
+  cache stops carrying image bytes) each change something the app observes.
   Each deviation is named in its ADR and the app side is adjusted deliberately at
   `STEP-07` rather than discovered there. `DEC-02`
   changes dependency resolution but not parsing behaviour, so it is not a
@@ -156,14 +159,46 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   Verified 2026-08-31, no parser constructs `ImageBlock` today, so the sealed
   model carries a variant nothing can produce — which cannot ship, because both
   removing and adding a variant later are breaking changes.
-- `DEC-11` **Settled** — the EPUB front-matter heading heuristic stays as it is
-  and is documented, not turned into a parameter. It suppresses only the
-  *duplicate* inline heading for navigation labels such as "Title Page" and
-  "Cover"; the section's content is kept in full and the label is kept in
-  `Chapter.title`, so nothing is lost and the effect is cosmetic. An option would
-  be a permanent API commitment with a doubled test matrix, taken on behalf of a
-  consumer who has not asked; adding one later is non-breaking, removing one is
-  not, so the asymmetry favours waiting.
+- `DEC-11` **Settled, and amended 2026-08-31 after the source was read.** The
+  package does not synthesise a `HeadingBlock` from a navigation label. It emits
+  the headings the document itself carries, and nothing else; the label stays in
+  `Chapter.title`.
+
+  The earlier wording of this decision described the source as *suppressing* a
+  duplicate inline heading. It does the opposite: it *injects* one.
+  `frontend/lib/src/data/book_parsing/epub_parser.dart` builds each chapter's
+  block list as
+
+  ```dart
+  if (_shouldShowTitleHeading(title, contentBlocks))
+    HeadingBlock(text: title, level: 1),
+  ...contentBlocks,
+  ```
+
+  and `_shouldShowTitleHeading` returns false in exactly three cases: an empty
+  title, a title in the five-entry `_frontMatterTitles` set
+  (`title page`, `titlepage`, `half title`, `halftitle`, `cover`), and a title
+  the section's own first `HeadingBlock` already repeats. Every other chapter
+  gets a synthetic level-1 heading that exists in no file.
+
+  So this is a behaviour change, not a restatement, and it is listed under
+  `NS-03` accordingly. Its size is measured rather than guessed: *Witchy Eye*
+  carries one heading tag across 6 822 paragraphs
+  ([corpus-findings.md](../../engineering/corpus-findings.md)), so the app shows
+  30 synthetic chapter headings there today and the package shows none. Nothing
+  is lost — the label is in `Chapter.title` either way — but a reader UI that
+  rendered blocks alone would lose its chapter headings, which is why the app
+  side is named in `STEP-07` rather than discovered at it.
+
+  The original reasoning survives the correction: injection is not made a
+  parameter. An option is a permanent API commitment with a doubled test matrix,
+  taken on behalf of a consumer who has not asked, and a caller that wants the
+  label rendered already has it in `Chapter.title`.
+
+  The same reading records a second source behaviour with no owner: the source
+  drops a chapter whose block list comes out empty (`if (blocks.isNotEmpty)`,
+  same file), and does not advance its index for it. Whether the package does
+  the same is `OQ-17`.
 - `DEC-12` **Settled** — the segmenter travels inside the document, so any
   `TextSegmenter` implementation must hold plain data only. Recorded on
   [domain/model.md](../../domain/model.md) with its failure mode: a compiled
@@ -225,6 +260,42 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   half-title and a dedication lost silently, against one declared contents page
   worth losing. Keeping them is a further `NS-03` deviation, in the direction of
   returning more content rather than less.
+- `DEC-19` **Settled** — `Sentence` and `Word` define `==`; every other exported
+  type keeps identity, each with a recorded reason:
+  [ADR-20260901T101500Z](../../adr/ADR-20260901T101500Z-value-equality-on-spans-only.md).
+  Verified 2026-09-01: neither `book_document.dart` nor `book_metadata.dart`
+  declares an `operator ==` today, and no app call site compares these types, so
+  this is not an `NS-03` deviation — it adds a capability the app never used.
+- `DEC-20` **Settled** — `ParseFailureKind` is closed at five, gaining
+  `drmProtected`:
+  [ADR-20260901T101600Z](../../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md).
+  Verified 2026-09-01: the app has exactly one kind today,
+  `FailureKind.bookParse`, at `epub_parser.dart:48`, `:70`, `:94` and
+  `fb2_parser.dart:45`, `:79`, `:96`, so five is a refinement rather than a
+  contradiction. It is still an `NS-03` deviation, because the user-facing message
+  for a locked book changes at `STEP-07` from "could not read this file" to
+  something actionable.
+- `DEC-21` **Settled** — `emptyDocument` means no `Block` in any chapter, not no
+  text, so an image-only book parses:
+  [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md).
+  Verified 2026-09-01 at `epub_parser.dart:67-73`, which refuses a book with no
+  "readable text content", and `:133`, which drops a chapter with no blocks. The
+  empty-chapter rule is kept; the document-level rule is an `NS-03` deviation in
+  the direction of accepting books the app rejects.
+- `DEC-22` **Settled** — the codec encodes images by reference and hands the bytes
+  back to the caller:
+  [ADR-20260901T101800Z](../../adr/ADR-20260901T101800Z-images-encoded-by-reference.md).
+  Verified 2026-09-01: the app's own codec embeds them as base64 at
+  `book_document_codec.dart:71` and `page_disk_cache.dart:143`, though no parser
+  emits an `ImageBlock` today, so the branch is dead. An `NS-03` deviation on the
+  cache format, which `STEP-07` rewrites and whose version it bumps anyway.
+- `DEC-23` **Settled** — FB2 `parseMetadata` streams with `parseEvents` instead of
+  building a DOM:
+  [ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md).
+  Verified 2026-09-01 at `fb2_parser.dart:34`, which calls
+  `XmlDocument.parse(_decode(bytes))` inside the metadata path. Not an `NS-03`
+  deviation: the results are identical and only the cost changes. The price is a
+  second FB2 reading path, which `SC-13` guards.
 
 ## Verify
 
@@ -240,8 +311,13 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   before the getter is touched.
 - `SC-09` (`REQ-01`, `DEC-10`) — An illustrated book of each format yields
   `ImageBlock`s in document order, each carrying its media type.
-- `SC-10` (`REQ-01`) — `parseMetadata` on a book with many chapters does not
-  inflate chapter entries; the cheap path stays cheap.
+- `SC-10` (`REQ-01`) — `parseMetadata` is cheap in work, not merely in the shape
+  of its result. Asserting that it "does not inflate chapter entries" would pass
+  on a reader that walks the whole book and discards it, which is what an FB2
+  DOM parse does, so the assertion is on the work: for a book of each format,
+  `parseMetadata` neither builds block content nor materialises any `<binary>` /
+  manifest entry other than the cover. Instrument the reader rather than time it
+  — a wall-clock threshold is flaky on CI and says nothing on a small fixture.
 - `SC-11` (`REQ-01`, `DEC-12`) — A parsed document survives `Isolate.run`,
   including with a caller-supplied segmenter.
 - `SC-12` (`REQ-01`, `DEC-06`) — parse, encode, decode: the restored document
@@ -260,6 +336,27 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `SC-17` (`REQ-01`, `DEC-18`) — an EPUB with unnavigated front matter yields it
   as untitled chapters, while a spine item declared `type="toc"` yields no
   chapter; a contents page that is not declared is kept.
+- `SC-18` (`REQ-01`, `DEC-11`) — an EPUB whose chapters carry no heading tags
+  yields no `HeadingBlock`, even where the navigation supplies a label for every
+  chapter. The label appears in `Chapter.title` and nowhere else. This is the
+  guard on the deviation `DEC-11` records: a synthetic heading is easy to
+  reintroduce by accident while porting the reader.
+- `SC-19` (`REQ-01`, `DEC-07`) — every `ArchiveContent` case is reachable and
+  distinguishable: a plain `.fb2` yields `NotAnArchive`, an EPUB yields
+  `EpubArchive`, a one-book zip yields `WrappedBook` naming the entry, a zip of
+  unrelated files yields `NoBookInside`, and a zip of three books yields
+  `SeveralBooksInside` listing all three. The archive layer is exported for the
+  ambiguous cases, so testing only the transparent one tests the wrong thing.
+- `SC-20` (`REQ-01`, `DEC-03`) — `normalizeLanguageCode` reduces a BCP-47 value
+  to its primary subtag (`en-GB`, `en-US`, `zh-Hans-CN`), lower-cases it, accepts
+  any ISO-639-1 code, and returns the fallback for a value outside the standard.
+  The corpus supplies `en-GB` and `en-US`, which is what the function exists for.
+- `SC-21` (`REQ-01`, `DEC-06`) — a golden encoded document is asserted against
+  the current `kBookDocumentSchemaVersion`, so a change to the encoded shape
+  fails until the version moves with it. Required by
+  [ADR-20260831T135325Z](../../adr/ADR-20260831T135325Z-optional-serialization-library.md)
+  as the mitigation for a forgotten version bump; `SC-12` round-trips the codec
+  but cannot detect that the shape changed.
 - `NEG-01` (`REQ-01`) — A corrupt file returns `ParseErr` and does not throw.
 - `NEG-02` (`REQ-01`, `DEC-10`) — An image that cannot be resolved is skipped and
   the book still parses.
@@ -270,7 +367,7 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `SC-08` (`REQ-04`) — TeaderBook builds and its book-related tests pass against
   the published package, with `lib/src/data/book_parsing/` removed.
 
-- `CHK-01` (`REQ-01`, `SC-01`..`SC-05`, `SC-09`..`SC-17`, `NEG-01`, `NEG-02`) —
+- `CHK-01` (`REQ-01`, `SC-01`..`SC-05`, `SC-09`..`SC-21`, `NEG-01`, `NEG-02`) —
   `dart test` in the package; all suites green.
 - `CHK-02` (`REQ-03`, `SC-06`) — `dart pub get` and `dart test` in a scratch
   pure-Dart project depending on the package; no Flutter resolution.
@@ -284,6 +381,13 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   [format-mapping.md](../../engineering/format-mapping.md).
 - `CHK-06` (`REQ-04`, `SC-08`) — TeaderBook test suite green with the local
   parsing directory deleted.
+- `CHK-07` (`REQ-01`, `STOP-04`) — the reader is run over the whole local corpus
+  — 186 EPUB and 211 FB2 — and every file parses without throwing and without
+  `ParseErr`, with the per-file chapter and block counts recorded. This is the
+  only check that exercises `STOP-04`, whose condition is "the reader fails on a
+  whole producer's output": no fixture set can state that, and the corpus has so
+  far been read by a survey script that never calls the parser. It runs locally
+  and not in CI — the corpus is `.gitignore`d and must never ship.
 
 - `EVID-01` (`CHK-01`) — `test/fixtures/` with valid books of both formats and
   deliberately corrupt files, plus the passing test run.
@@ -294,6 +398,9 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `EVID-04` (`CHK-01`, `CHK-04`) — The published pub.dev version page.
 - `EVID-05` (`CHK-06`) — The TeaderBook pull request that removes
   `lib/src/data/book_parsing/` and adds the dependency.
+- `EVID-08` (`CHK-07`) — The corpus parse run: files attempted, failures by
+  `ParseFailureKind`, and the chapter-count distribution, compared against the
+  structure counts the survey already produced.
 - `EVID-07` (`CHK-05`, `DEC-14`, `DEC-16`) — The corpus survey behind
   [corpus-findings.md](../../engineering/corpus-findings.md): per-file structure
   counts over the EPUB and FB2 collections, and the producer-coverage gap it
