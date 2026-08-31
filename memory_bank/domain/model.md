@@ -7,7 +7,7 @@ derived_from:
   - ../product/value-proposition.md
 canonical_for:
   - document_model
-status: draft
+status: active
 ---
 # Document Model
 
@@ -16,29 +16,56 @@ layer needs to know which format a book came from.
 
 ## The Structure
 
-A book is a `BookDocument`. It carries `title`, `author`, `sourceLanguageCode`,
-an optional cover, and an ordered list of chapters.
+A book is a `BookDocument`. It carries a `BookMetadata` and an ordered list of
+chapters, and holds no metadata fields of its own
+([ADR-20260831T162651Z](../adr/ADR-20260831T162651Z-document-carries-metadata.md)).
+Nesting rather than repeating is what makes the cheap metadata path honest: for
+the same bytes and the same fallback, `parse(b).metadata` equals
+`parseMetadata(b)`, and that is a test rather than a promise.
 
-The cover is the bytes the file stored plus the media type it declared — the
-package never decodes or re-encodes it
+A `BookMetadata` carries:
+
+- `title` — nullable. Both formats can omit it and the package invents nothing.
+  A caller that needs a display string supplies its own fallback, the way it
+  already supplies `fallbackLanguageCode`.
+- `authors` — a `List<String>`, empty when the file declares none. Both formats
+  allow several, and joining them into one string is a loss that a published
+  signature would make permanent.
+- `sourceLanguageCode` — an ISO-639-1 code: the value the file declared when it
+  is one, and `fallbackLanguageCode` otherwise
+  ([ADR-20260831T135025Z](../adr/ADR-20260831T135025Z-language-resolution.md)).
+- `cover` — a nullable `ImageData`.
+
+An `ImageData` is the `bytes` the file stored plus the `mediaType` it declared.
+The package never decodes or re-encodes either
 ([ADR-20260831T135125Z](../adr/ADR-20260831T135125Z-raw-cover-bytes.md)), so a
-caller that needs a thumbnail makes one, and both formats behave identically.
+caller that needs a thumbnail makes one, and both formats behave identically. A
+cover and an inline image are the same thing, so the model carries one type for
+them rather than two. `ImageData` has no `==`: a cover can be several megabytes,
+and an equality operator that walks it is a cost hidden behind a symbol.
 
-`sourceLanguageCode` is an ISO-639-1 code: the value the file declared when it is
-one, and `fallbackLanguageCode` otherwise
-([ADR-20260831T135025Z](../adr/ADR-20260831T135025Z-language-resolution.md)).
-
-A `Chapter` carries its `index`, a `title`, and a list of blocks.
+A `Chapter` carries its `index`, a nullable `title`, a `level`, and a list of
+blocks. The chapter list is flat and in reading order; `level` is the depth the
+source navigation gave the chapter, `0` at the top
+([ADR-20260831T162751Z](../adr/ADR-20260831T162751Z-flat-chapter-list.md)). A
+chapter has no identifier: its identity is `index`, stable for the same input
+bytes within one major version of the package.
 
 A `Block` is one of exactly three variants:
 
 - `ParagraphBlock` — `text`, plus `sentences` resolved lazily on first access
-  through the `TextSegmenter` the paragraph was built with;
+  through the `TextSegmenter` the paragraph was built with. `text` may contain
+  newlines: a line break inside a paragraph is preserved rather than splitting
+  the paragraph, which is how verse survives without a variant of its own
+  ([ADR-20260831T162951Z](../adr/ADR-20260831T162951Z-non-prose-flattens-to-paragraphs.md));
 - `HeadingBlock` — `text` and a `level`;
-- `ImageBlock` — the image's `bytes` exactly as the file stored them, plus its
-  `mediaType`. Both readers produce it
+- `ImageBlock` — an `ImageData`. Both readers produce it
   ([ADR-20260831T144622Z](../adr/ADR-20260831T144622Z-inline-images-are-extracted.md));
   an image that cannot be resolved is skipped rather than failing the parse.
+
+Everything a format holds that is none of the three becomes paragraphs: text is
+preserved, structure is not. The construct-by-construct table is
+[engineering/format-mapping.md](../engineering/format-mapping.md).
 
 Below a paragraph sit two segmentation types. A `Sentence` carries `text`,
 `start`, `end`, and its `words`; a `Word` carries `text`, `start`, and `end`.

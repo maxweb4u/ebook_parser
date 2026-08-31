@@ -26,8 +26,13 @@ routing layer. Read `brief.md` first.
 
 - [`implementation-plan.md`](implementation-plan.md)
   Read when you need: to execute the work.
-  Answers the question: in what order the seven steps run, what blocks what, and
-  which conditions stop execution.
+  Answers the question: in what order the steps run, what blocks what, which
+  conditions stop execution, and what `OQ-11` still leaves open.
+
+- [`../../engineering/format-mapping.md`](../../engineering/format-mapping.md)
+  Read when you need: to write or review either reader.
+  Answers the question: what each EPUB and FB2 construct becomes in the model,
+  where each metadata field comes from, and what is deliberately not extracted.
 
 - [`../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md`](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md)
   Read when you need: to know why the package is named `ebook_parser`.
@@ -38,7 +43,7 @@ routing layer. Read `brief.md` first.
   Read when you need: to know why both formats return one model.
   Answers the question: what was traded away for convergence.
 
-The nine decisions taken on 2026-08-31, all of which change what `STEP-01`
+The fifteen decisions taken on 2026-08-31, all of which change what `STEP-01`
 writes or what TeaderBook must be refactored to accept at `STEP-07`:
 
 - [`ADR-20260831T134825Z`](../../adr/ADR-20260831T134825Z-own-epub-reader.md) —
@@ -65,6 +70,24 @@ writes or what TeaderBook must be refactored to accept at `STEP-07`:
 - [`ADR-20260831T144622Z`](../../adr/ADR-20260831T144622Z-inline-images-are-extracted.md) —
   both readers emit inline images. Answers: why a sealed model may not ship a
   variant nothing produces.
+- [`ADR-20260831T162651Z`](../../adr/ADR-20260831T162651Z-document-carries-metadata.md) —
+  `BookDocument` nests a `BookMetadata`. Answers: what `BookMetadata` actually
+  holds, and what keeps the cheap path and the full path from diverging.
+- [`ADR-20260831T162751Z`](../../adr/ADR-20260831T162751Z-flat-chapter-list.md) —
+  chapters are flat, ordered, and carry a navigation depth. Answers: what happens
+  to a nested table of contents and what identifies a chapter.
+- [`ADR-20260831T162851Z`](../../adr/ADR-20260831T162851Z-zip-routing-decorator.md) —
+  a wrapped book is routed through an unwrapping decorator. Answers: which bytes
+  a caller passes to `parse`, which two upstream documents disagreed on.
+- [`ADR-20260831T162951Z`](../../adr/ADR-20260831T162951Z-non-prose-flattens-to-paragraphs.md) —
+  text is preserved, structure is not. Answers: what becomes of tables, lists,
+  verse and FB2 note bodies in a model with three block variants.
+- [`ADR-20260831T173725Z`](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md) —
+  an EPUB chapter is a navigation entry, not a spine item. Answers: what the
+  `STEP-00b` corpus measured, and how a document is split at its anchors.
+- [`ADR-20260831T184812Z`](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md) —
+  unnavigated front matter is kept; a declared contents page is not. Answers: why
+  the package returns documents the application has never shown.
 
 `design.md` is absent by decision: `brief.md` records `Design required: no`
 because architecture, the exported surface, and both decisions are owned

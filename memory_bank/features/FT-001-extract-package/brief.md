@@ -50,11 +50,15 @@ TeaderBook back on top of it. The full inventory is owned by
 - `NS-02` No rendering, pagination, or reader UI.
 - `NS-03` No behaviour change by default. Parsing results after the switch match
   what TeaderBook produces today; this is an extraction, not an improvement.
-  Four accepted decisions cannot honour this literally — `DEC-03` (language
+  Eight accepted decisions cannot honour this literally — `DEC-03` (language
   resolution stops consulting the app's catalog), `DEC-04` (covers are no longer
-  re-encoded), `DEC-05` (pagination fields leave the model) and `DEC-10` (inline
-  images start being extracted) each change something the app observes. Each deviation is named in its ADR and the app side
-  is adjusted deliberately at `STEP-07` rather than discovered there. `DEC-02`
+  re-encoded), `DEC-05` (pagination fields leave the model), `DEC-10` (inline
+  images start being extracted), `DEC-13` (metadata moves off `BookDocument` and
+  `author` becomes a list), `DEC-14` (FB2 note bodies stop being skipped),
+  `DEC-17` (EPUB chapter counts follow the navigation) and `DEC-18` (unnavigated
+  front matter starts being returned) each change something the app observes.
+  Each deviation is named in its ADR and the app side is adjusted deliberately at
+  `STEP-07` rather than discovered there. `DEC-02`
   changes dependency resolution but not parsing behaviour, so it is not a
   deviation from `NS-03`.
 - `NS-04` **Horizontal slice justification.** This is a refactoring and
@@ -171,6 +175,56 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   in [public-api.md](../../engineering/public-api.md), which owns the exported
   surface; no ADR, because nothing was traded away — the function is a read-only
   traversal of the model, and moving it onto the model is where it belonged.
+- `DEC-13` **Settled** — `BookDocument` carries a `BookMetadata` instead of
+  repeating its fields, `authors` is a list, `title` is nullable, and one
+  `ImageData` type serves both the cover and inline images:
+  [ADR-20260831T162651Z](../../adr/ADR-20260831T162651Z-document-carries-metadata.md).
+  `BookMetadata` had no owner in the bank at all, and the two paths that fill it
+  had nothing keeping them in step — the same shape as the `coverImage`
+  divergence in `ASM-01`. Nesting makes `parse(b).metadata == parseMetadata(b)`
+  testable (`SC-13`).
+- `DEC-14` **Settled** — the extraction boundary is `text is preserved, structure
+  is not`: tables, lists, verse, quotations and inline markup flatten into
+  paragraphs, and FB2 note bodies become trailing chapters:
+  [ADR-20260831T162951Z](../../adr/ADR-20260831T162951Z-non-prose-flattens-to-paragraphs.md),
+  with the construct-by-construct table in
+  [engineering/format-mapping.md](../../engineering/format-mapping.md). `Block`
+  is sealed, so the vocabulary is settled before publication or it costs a major
+  version. Most of this documents what the source already does; the note-bodies
+  rule does not. Verified 2026-08-31 in
+  `frontend/lib/src/data/book_parsing/fb2_parser.dart`, which reads
+  `if (body.getAttribute('name') == 'notes') continue;` — the source skips the
+  notes body outright, and 9% of the local FB2 collection has one
+  ([corpus-findings.md](../../engineering/corpus-findings.md)). Extracting it is
+  therefore a named `NS-03` deviation, and TeaderBook gains trailing chapters on
+  those books at `STEP-07`.
+- `DEC-15` **Settled** — a caller passes the bytes it holds and `bookParserFor`
+  routes a wrapped book through an unwrapping decorator:
+  [ADR-20260831T162851Z](../../adr/ADR-20260831T162851Z-zip-routing-decorator.md).
+  The two upstream documents contradicted each other on which bytes reach
+  `parse`, and `SC-02` could not be written until they agreed.
+- `DEC-16` **Settled** — chapters are a flat ordered list carrying a navigation
+  `level`, with no identifier beyond `index`:
+  [ADR-20260831T162751Z](../../adr/ADR-20260831T162751Z-flat-chapter-list.md).
+  How many chapters an EPUB yields was resolved from the corpus as `DEC-17`.
+- `DEC-17` **Settled** — an EPUB chapter is a navigation entry, and a spine item
+  holding several is split at its anchors:
+  [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md).
+  This closes `OQ-11` on `STEP-00b` evidence: the producers disagree, and spine
+  granularity costs Standard Ebooks' poetry edition 674 of its 718 navigation
+  entries while costing its prose editions nothing
+  ([corpus-findings.md](../../engineering/corpus-findings.md)). Chapter counts
+  therefore change against the source, and TeaderBook's index-keyed reading
+  positions are invalidated at `STEP-07` alongside its parse cache.
+- `DEC-18` **Settled** — a spine item with no navigation entry becomes an
+  untitled chapter, except one the format declares to be the table of contents:
+  [ADR-20260831T184812Z](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md).
+  Verified 2026-08-31 in `epub_parser.dart`, which iterates epubx's
+  navigation-derived `book.Chapters` and never reads the spine: the app drops
+  every unnavigated document today. On a retail Baen file that is a title page, a
+  half-title and a dedication lost silently, against one declared contents page
+  worth losing. Keeping them is a further `NS-03` deviation, in the direction of
+  returning more content rather than less.
 
 ## Verify
 
@@ -192,6 +246,20 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   including with a caller-supplied segmenter.
 - `SC-12` (`REQ-01`, `DEC-06`) — parse, encode, decode: the restored document
   segments identically to the original.
+- `SC-13` (`REQ-01`, `DEC-13`) — for the same bytes and the same
+  `fallbackLanguageCode`, `parse(b).metadata` equals `parseMetadata(b)`, field by
+  field, with cover bytes asserted separately.
+- `SC-14` (`REQ-01`, `DEC-14`) — a book of each format containing a table, a
+  list, verse and a quotation yields their text as paragraphs in document order;
+  an FB2 with `<body name="notes">` yields its notes as trailing chapters.
+- `SC-15` (`REQ-01`, `DEC-16`) — a book of each format with nested navigation
+  yields a flat chapter list in reading order with `level` set from that nesting.
+- `SC-16` (`REQ-01`, `DEC-17`) — an EPUB whose navigation entries point into
+  shared documents yields one chapter per entry, in spine-then-document order; an
+  anchor that resolves to nothing drops its entry without failing the parse.
+- `SC-17` (`REQ-01`, `DEC-18`) — an EPUB with unnavigated front matter yields it
+  as untitled chapters, while a spine item declared `type="toc"` yields no
+  chapter; a contents page that is not declared is kept.
 - `NEG-01` (`REQ-01`) — A corrupt file returns `ParseErr` and does not throw.
 - `NEG-02` (`REQ-01`, `DEC-10`) — An image that cannot be resolved is skipped and
   the book still parses.
@@ -202,7 +270,7 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `SC-08` (`REQ-04`) — TeaderBook builds and its book-related tests pass against
   the published package, with `lib/src/data/book_parsing/` removed.
 
-- `CHK-01` (`REQ-01`, `SC-01`..`SC-05`, `SC-09`..`SC-12`, `NEG-01`, `NEG-02`) —
+- `CHK-01` (`REQ-01`, `SC-01`..`SC-05`, `SC-09`..`SC-17`, `NEG-01`, `NEG-02`) —
   `dart test` in the package; all suites green.
 - `CHK-02` (`REQ-03`, `SC-06`) — `dart pub get` and `dart test` in a scratch
   pure-Dart project depending on the package; no Flutter resolution.
@@ -210,9 +278,10 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   in the package returns nothing.
 - `CHK-04` (`REQ-01`, `REQ-03`) — `dart pub publish --dry-run` reports no
   issues.
-- `CHK-05` (`REQ-01`, `DEC-01`) — README states the supported formats and the
-  actual segmentation boundary in terms of writing systems; reviewed against
-  `DEC-01`'s resolution.
+- `CHK-05` (`REQ-01`, `DEC-01`, `DEC-14`) — README states the supported formats,
+  the actual segmentation boundary in terms of writing systems, and what is not
+  extracted from each format; reviewed against `DEC-01`'s resolution and against
+  [format-mapping.md](../../engineering/format-mapping.md).
 - `CHK-06` (`REQ-04`, `SC-08`) — TeaderBook test suite green with the local
   parsing directory deleted.
 
@@ -225,6 +294,10 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `EVID-04` (`CHK-01`, `CHK-04`) — The published pub.dev version page.
 - `EVID-05` (`CHK-06`) — The TeaderBook pull request that removes
   `lib/src/data/book_parsing/` and adds the dependency.
+- `EVID-07` (`CHK-05`, `DEC-14`, `DEC-16`) — The corpus survey behind
+  [corpus-findings.md](../../engineering/corpus-findings.md): per-file structure
+  counts over the EPUB and FB2 collections, and the producer-coverage gap it
+  exposes.
 
 ## Exit Criteria
 

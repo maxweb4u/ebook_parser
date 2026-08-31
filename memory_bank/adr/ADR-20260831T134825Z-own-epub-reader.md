@@ -12,7 +12,7 @@ must_not_define:
   - package_layout
   - public_api_surface
   - current_system_state
-status: draft
+status: active
 decision_status: accepted
 date: '2026-08-31'
 audience: humans_and_agents

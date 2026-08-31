@@ -12,7 +12,7 @@ canonical_for:
 must_not_define:
   - public_api_surface
   - document_model
-status: draft
+status: active
 ---
 # Package Layout
 
@@ -83,8 +83,9 @@ exported symbol, versioned by the schema constant it exports.
 - `book_document.dart`, `book_metadata.dart` — the model types.
 - `parse_result.dart` — `ParseResult<T>` and `ParseFailure`, defined here rather
   than imported, so the package carries no foreign result type.
-- `book_parser.dart` — the port; `book_parser_factory.dart` — format detection
-  and parser selection.
+- `book_parser.dart` — the port; `book_parser_factory.dart` — format detection,
+  parser selection, and the unwrapping decorator a wrapped book is routed through
+  ([ADR-20260831T162851Z](../adr/ADR-20260831T162851Z-zip-routing-decorator.md)).
 - `epub/`, `fb2/` — one directory per format. They are the only places that know
   a format exists; everything above them sees the shared model. `epub/` is the
   package's own reader rather than a wrapper
@@ -94,11 +95,15 @@ exported symbol, versioned by the schema constant it exports.
   images into the model
   ([ADR-20260831T144622Z](../adr/ADR-20260831T144622Z-inline-images-are-extracted.md)),
   and both keep the metadata path from touching chapter content.
-- `book_archive.dart` — zip handling. `.fb2.zip` unpacks before the FB2 parser is
-  reached and no parser learns that archives exist, but the layer is **public**,
-  not internal: a zip holding no book or several books is an outcome the caller
-  must decide about
+- `book_archive.dart` — zip handling, and **public**, not internal: a zip holding
+  no book or several books is an outcome the caller must decide about
   ([ADR-20260831T135425Z](../adr/ADR-20260831T135425Z-archive-layer-is-public.md)).
+  The line it draws is between a format container and a transport wrapper. An
+  EPUB container *is* a zip, so `epub/` reads one and always will; a `.fb2.zip`
+  wraps a file that is not itself an archive, and no format parser learns that
+  such a wrapper exists — it is unwrapped by the decorator in
+  `book_parser_factory.dart` before the FB2 parser sees anything
+  ([ADR-20260831T162851Z](../adr/ADR-20260831T162851Z-zip-routing-decorator.md)).
 - `language_codes.dart` — the ISO-639-1 set and BCP-47 normalization, so no
   consumer's supported-language list is baked into a parser
   ([ADR-20260831T135025Z](../adr/ADR-20260831T135025Z-language-resolution.md)).

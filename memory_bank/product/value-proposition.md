@@ -7,7 +7,7 @@ derived_from:
   - context.md
 canonical_for:
   - product_value_proposition
-status: draft
+status: active
 ---
 # Value Proposition
 

@@ -1,0 +1,11 @@
+# Local verification corpus. Real books, fetched or collected, never committed:
+# the in-copyright ones cannot be redistributed, and `dart pub publish` ships
+# test/ to every consumer. Re-fetch instructions live in
+# memory_bank/engineering/corpus-findings.md.
+corpus/
+
+# Dart / pub
+.dart_tool/
+.packages
+pubspec.lock
+build/

@@ -10,7 +10,7 @@ canonical_for:
 must_not_define:
   - current_system_state
   - implementation_plan
-status: draft
+status: active
 decision_status: accepted
 date: '2026-08-30'
 audience: humans_and_agents

@@ -7,7 +7,7 @@ derived_from:
   - ../domain/model.md
 canonical_for:
   - public_api_surface
-status: draft
+status: active
 ---
 # Public API Surface
 
@@ -31,6 +31,20 @@ not an error.
 
 The two constant lists differ on purpose: `zip` is importable but not a format.
 It is the `.fb2.zip` distribution wrapper, unpacked before parsing.
+
+A caller always passes the bytes it holds — to `bookParserFor`, and then to
+`parse`. For a zip holding exactly one book, `bookParserFor` returns an
+unwrapping decorator over the parser for the inner file rather than that parser
+itself, so no format parser acquires transport responsibilities and the caller
+unwraps nothing
+([ADR-20260831T162851Z](../adr/ADR-20260831T162851Z-zip-routing-decorator.md)).
+The decorator is not a named export: it is an `IBookParser` like any other.
+Unwrapping is one level deep, and the decorator caches nothing, so
+`parseMetadata` followed by `parse` decompresses twice.
+
+An EPUB is passed as the zip it is — its container is part of the format. A zip
+holding nothing readable, or several books, yields `null`; telling those two
+apart is what `inspectBookArchive` is for.
 
 ## The Archive Layer
 
@@ -134,6 +148,51 @@ reader, which stage — and belongs in a log.
 is not sealed: a consumer branching on the cause usually wants a default case,
 and a fifth cause should not break every call site the way a new `Block` variant
 deliberately does.
+
+## Model Types
+
+The model is exported in full. Its semantics are owned by
+[domain/model.md](../domain/model.md); the names that form the contract are:
+
+```dart
+class BookDocument { final BookMetadata metadata; final List<Chapter> chapters; }
+
+class BookMetadata { final String? title;
+                     final List<String> authors;
+                     final String sourceLanguageCode;
+                     final ImageData? cover; }
+
+class ImageData { final Uint8List bytes; final String mediaType; }
+
+class Chapter { final int index; final String? title;
+                final int level;  final List<Block> blocks; }
+
+sealed class Block {}
+final class ParagraphBlock extends Block { final String text;
+                                           List<Sentence> get sentences; }
+final class HeadingBlock   extends Block { final String text; final int level; }
+final class ImageBlock     extends Block { final ImageData image; }
+
+class Sentence { final String text; final int start, end;
+                 final List<Word> words; }
+class Word     { final String text; final int start, end; }
+```
+
+`BookMetadata` is both what `parseMetadata` returns and what `parse` puts on the
+document, so the cheap path cannot answer differently from the full one
+([ADR-20260831T162651Z](../adr/ADR-20260831T162651Z-document-carries-metadata.md)).
+`title` is nullable and `authors` may be empty: the package declares what the
+file declared and invents nothing.
+
+`ImageData` covers both the cover and every inline image, and has no `==` — a
+cover can be several megabytes, and walking it behind an operator is a cost the
+caller cannot see.
+
+`Chapter.level` is navigation depth, not heading depth, and the chapter list is
+flat and in reading order
+([ADR-20260831T162751Z](../adr/ADR-20260831T162751Z-flat-chapter-list.md)). What
+each format contributes to each of these is
+[format-mapping.md](format-mapping.md).
 
 ## Segmentation
 
