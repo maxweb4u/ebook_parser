@@ -2,7 +2,7 @@
 title: Value Proposition
 doc_kind: product
 doc_function: canonical
-purpose: 'Why ebook_parser is worth extracting as a package: the FB2 gap on Dart, the single document model both formats converge on, and the four capabilities analogues lack.'
+purpose: 'Why ebook_parser is worth extracting as a package: the FB2 gap on Dart, the single document model both formats converge on, and the capabilities analogues lack.'
 derived_from:
   - context.md
 canonical_for:

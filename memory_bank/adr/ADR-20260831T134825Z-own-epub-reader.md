@@ -89,7 +89,7 @@ because getting either wrong removes something the package claims:
 which read the OPF and cover without inflating chapters. The reader reproduces
 that explicitly: read the zip's central directory, inflate the OPF and the cover
 entry, and nothing else. Written naively it would decompress the whole book, and
-the cheap metadata path — one of the package's four stated capabilities — would
+the cheap metadata path — one of the package's stated capabilities — would
 disappear without any test failing.
 
 **Chapter content covers more than paragraphs and headings.** The extracted code

@@ -85,7 +85,11 @@ This does not compete with the rule above that keeps unnavigated spine items:
 that one decides which documents become chapters, this one decides that a chapter
 with nothing in it earns no entry in the contents. A spine item holding a
 full-page image has an `ImageBlock` and survives both — which is why a
-fixed-layout book parses rather than vanishing.
+fixed-layout book parses rather than vanishing. One exception: a chapter
+produced by a navigation entry survives empty — two entries anchoring to one
+block would otherwise silently lose the shallower one
+([ADR-20260831T173725Z](../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md),
+rule 9).
 
 A document in which *no* chapter has any block is refused as `emptyDocument`.
 That is a stricter test than the source's, which asks for readable **text** and

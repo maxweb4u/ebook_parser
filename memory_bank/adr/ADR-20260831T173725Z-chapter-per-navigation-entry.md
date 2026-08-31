@@ -111,6 +111,15 @@ The rules, in the order they apply:
    ([ADR-20260831T144622Z](ADR-20260831T144622Z-inline-images-are-extracted.md)).
 8. **An entry pointing outside the spine** is ignored. It is not in reading order,
    so it cannot become a chapter.
+9. **Entries whose anchors resolve to the same split point** each still produce
+   a chapter. The shallower entries carry their `title` and `level` and no
+   blocks; the last one in navigation order takes the content. A chapter
+   produced by a navigation entry is exempt from the empty-chapter drop in
+   [ADR-20260901T101700Z](ADR-20260901T101700Z-empty-document-means-no-blocks.md) —
+   that rule aims at junk structure, not at the table of contents — so "one
+   chapter per navigation entry" is literal even here. An NCX part and its
+   first chapter routinely anchor to the same spot, which is why this needed a
+   rule (`OQ-26`, closed 2026-09-01).
 
 FB2 is unaffected: its sections are already the navigation, and nothing there
 needs splitting.
@@ -136,8 +145,12 @@ needs splitting.
   navigation entries, so a spine item nobody navigated to yields no chapter,
   while rule 2 emits an untitled one. Measured on a retail Baen file, that is 30
   chapters in the source against 37 here
-  ([corpus-findings.md](../engineering/corpus-findings.md)). Whether rule 2
-  should exist at all is reopened as `OQ-13`.
+  ([corpus-findings.md](../engineering/corpus-findings.md)) — 36 after the
+  declared-contents-page exception
+  [ADR-20260831T184812Z](ADR-20260831T184812Z-unnavigated-spine-items.md) later
+  carved out of rule 2. Whether rule 2 should exist at all was reopened as
+  `OQ-13` and settled the same day by that ADR: the rule stands, with that one
+  exception.
 - TeaderBook's stored reading positions are keyed by chapter index, so they are
   invalidated at `STEP-07` either way; the cache version bump that `DEC-04` and
   `DEC-06` already require absorbs it.
@@ -163,7 +176,7 @@ needs splitting.
 
 The risk is the edge cases, since splitting is new code rather than copied code:
 anchors inside a table, anchors on inline elements mid-sentence, anchors that
-appear before any content, duplicate ids. Rules 5 through 8 exist to make each of
+appear before any content, duplicate ids. Rules 5 through 9 exist to make each of
 them a defined outcome rather than a surprise, and each gets a test built from a
 constructed document rather than waiting for a real book to expose it.
 

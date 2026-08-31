@@ -42,7 +42,7 @@ have to rebuild the layer it is supposed to be deleting.
 - `REQ-04` requires TeaderBook to hold no second copy of this code;
 - the five cases are import outcomes, and only the caller can decide what to do
   about the ambiguous ones;
-- `.fb2.zip` handling is one of the four capabilities the package claims
+- `.fb2.zip` handling is one of the capabilities the package claims
   analogues lack ([value-proposition.md](../product/value-proposition.md)), and a
   capability nobody can call is not a capability;
 - exporting a sealed type is a compatibility commitment: adding a sixth case

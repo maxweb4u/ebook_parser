@@ -92,6 +92,15 @@ rule decides which documents become chapters, and this one decides that a chapte
 with nothing in it is not worth an entry in the contents. A spine item holding a
 full-page image has an `ImageBlock` and survives both rules.
 
+One exception, added 2026-09-01 when `OQ-26` composed this rule with rule 4 of
+[ADR-20260831T173725Z](ADR-20260831T173725Z-chapter-per-navigation-entry.md): a
+chapter produced by a navigation entry is kept even when splitting leaves it
+without blocks. An NCX part and its first chapter routinely anchor to the same
+spot, and dropping the emptied fragment would delete an entry from the table of
+contents this model keeps nowhere else. The drop rule aims at junk structure —
+unnavigated empties, pre-anchor slivers — not at navigation. `Chapter.index`
+stays dense either way.
+
 The `NS-03` deviation is recorded rather than buried: an image-only book is
 refused by TeaderBook today and parses successfully here.
 

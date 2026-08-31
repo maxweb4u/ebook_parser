@@ -105,7 +105,7 @@ needs deliberately corrupt inputs, which do not exist today.
 
 | ID | Question | Why unresolved | Blocks | Default action |
 | --- | --- | --- | --- | --- |
-| `OQ-02` | Is `ebook_parser` still free on pub.dev at publish time? | Checked twice on 2026-08-31: `GET /api/packages/ebook_parser` returns 404, and a search for the name returns eight packages, none of them it. Free, but pub.dev does not reserve names (`CON-01`), so the answer holds for today and not for publication day | `STEP-06` | `dart pub publish --dry-run` in `STEP-05` re-confirms; a taken name reopens [ADR-20260830T161251Z](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md). |
+| `OQ-02` | Is `ebook_parser` still free on pub.dev at publish time? | Checked twice on 2026-08-31 and again on 2026-09-01: `GET /api/packages/ebook_parser` returns 404, and a search for the name returns eight packages, none of them it. Free, but pub.dev does not reserve names (`CON-01`), so the answer holds for today and not for publication day | `STEP-06` | `dart pub publish --dry-run` in `STEP-05` re-confirms; a taken name reopens [ADR-20260830T161251Z](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md). |
 
 Confirmed 2026-08-31 against pub.dev's own policy: there is no reservation
 mechanism at all, and publishing a placeholder to hold the name is prohibited
@@ -115,8 +115,11 @@ use." So the only instrument that would close `OQ-02` early is bringing
 Constraints currently forbid. Left as it is by decision; the question is
 recorded, not acted on.
 
-This is again the only open question left. Seven more (`OQ-19`..`OQ-25`) were
-opened on 2026-09-01 by a second architecture review — the parallel pass
+This is again the only open question left. `OQ-26`, opened on 2026-09-01 by a
+third review pass that read the chapter-splitting rules against the
+empty-chapter rule, was settled the same day as `DEC-31`. Seven more
+(`OQ-19`..`OQ-25`) were opened earlier that day by a second architecture
+review — the parallel pass
 [processes/review-decisions-against-each-other.md](../../processes/review-decisions-against-each-other.md)
 prescribes, run over the accepted ADRs and the canonical engineering documents;
 each sat in a seam between two documents rather than inside either one. All
@@ -151,6 +154,7 @@ settled.
 | `OQ-23` | Contract on `fallbackLanguageCode` | Normalized like a declared value; `ArgumentError` when it does not reduce to ISO-639-1 — a caller contract violation, not an expected failure. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-28`). |
 | `OQ-24` | ISO-639-2 declarations | A 639-2/B→639-1 mapping table joins `normalizeLanguageCode`; `eng`/`deu`/`rus` resolve to the declared language, and the known limitation closes. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-29`). |
 | `OQ-25` | `Sentence.words` with no word rule | The empty list — no rule means no words, not one sentence-wide word; contract-relevant because `Sentence.==` compares `words` element-wise. Recorded in [domain/model.md](../../domain/model.md) (`DEC-30`). |
+| `OQ-26` | Navigation anchors sharing a split point | Every entry still yields a chapter: the shallower ones keep `title` and `level` with no blocks, exempt from the empty-chapter drop — that rule aims at junk structure, not at the table of contents. Rule 9 in [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md), the exception in [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md) (`DEC-31`). |
 
 ## Work Order
 
@@ -189,7 +193,7 @@ settled.
   `emptyDocument` means. The fifth, the FB2 metadata cost, was not a contract and
   could have waited; it was taken now anyway rather than publishing a method whose
   name promises what it does not deliver for one of two formats.
-- `STEP-00e` (`DEC-24`..`DEC-30`) — **Done 2026-09-01.** A fourth decision pass,
+- `STEP-00e` (`DEC-24`..`DEC-31`) — **Done 2026-09-01.** A fourth decision pass,
   closing the seven questions a second parallel review found — this time in the
   seams between ADRs and the canonical engineering documents rather than between
   ADR pairs. One (`OQ-19`) was resolved by scoping a promise instead of changing
@@ -197,7 +201,10 @@ settled.
   a major-version event. The rest tightened contracts before they freeze: the
   codec's schema-version self-defence, decode-side segmenter seeding, an
   order-agnostic FB2 metadata reader, the `fallbackLanguageCode` contract, the
-  639-2 mapping table, and empty `words` for unruled scripts.
+  639-2 mapping table, and empty `words` for unruled scripts. A third pass the
+  same day added `DEC-31`: reading the chapter-splitting rules against the
+  empty-chapter rule showed their composition silently deleting navigation
+  entries that share an anchor, now rule 9 of the granularity ADR.
 
 - `STEP-01` (`REQ-01`) — Copy the code from all four source locations named in
   Current State into the layout owned by
@@ -283,7 +290,10 @@ settled.
     own (`DEC-06`), and its cache version bumped. It inherits the two-part shape:
     `encodeBlock` hands back image bytes separately, so the app stores them as
     files beside the json rather than base64 inside it, which is the opposite of
-    what its current codec does at `book_document_codec.dart:71`;
+    what its current codec does at `book_document_codec.dart:71`. It also passes
+    the document's segmenter to `decodeBlock`: a lone block carries no metadata
+    to seed the default from (`DEC-26`), so a non-Latin book restored without
+    one would segment differently;
   - cover resizing at import with the platform image codec, and the parse-cache
     version bumped (`DEC-04`);
   - the declared language narrowed to the app's catalog at the import call site,

@@ -305,7 +305,8 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   [ADR-20260831T135425Z](../../adr/ADR-20260831T135425Z-archive-layer-is-public.md).
 - `DEC-25` **Settled 2026-09-01** — `encode` writes `kBookDocumentSchemaVersion`
   into the json and `decode` checks it, returning `null` on a mismatch; the
-  three causes of a `null` decode are documented. Closes `OQ-20`; recorded in
+  three causes of a `null` decode are documented, and `encodeBlock`/`decodeBlock`
+  carry and check the same version per block. Closes `OQ-20`; recorded in
   [public-api.md](../../engineering/public-api.md).
 - `DEC-26` **Settled 2026-09-01** — `decodeBookDocument` without a segmenter
   seeds the default from the decoded `metadata.sourceLanguageCode`, matching
@@ -330,6 +331,14 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   scripts with no word rule (Thai, Khmer, Lao, Burmese): no rule means no
   words, not one sentence-wide word. Closes `OQ-25`; recorded in
   [domain/model.md](../../domain/model.md).
+- `DEC-31` **Settled 2026-09-01** — navigation entries whose anchors resolve to
+  the same split point each still yield a chapter: the shallower ones keep
+  their `title` and `level` with no blocks, exempt from the empty-chapter drop,
+  which aims at junk structure rather than at the table of contents. Closes
+  `OQ-26`; recorded as rule 9 in
+  [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md)
+  and as the exception in
+  [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md).
 
 ## Verify
 
@@ -368,7 +377,9 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   yields a flat chapter list in reading order with `level` set from that nesting.
 - `SC-16` (`REQ-01`, `DEC-17`) — an EPUB whose navigation entries point into
   shared documents yields one chapter per entry, in spine-then-document order; an
-  anchor that resolves to nothing drops its entry without failing the parse.
+  anchor that resolves to nothing drops its entry without failing the parse. Two
+  entries anchored to one block yield both chapters, the shallower one titled
+  and empty (`DEC-31`).
 - `SC-17` (`REQ-01`, `DEC-18`) — an EPUB with unnavigated front matter yields it
   as untitled chapters, while a spine item declared `type="toc"` yields no
   chapter; a contents page that is not declared is kept.

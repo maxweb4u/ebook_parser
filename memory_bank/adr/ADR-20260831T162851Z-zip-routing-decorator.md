@@ -56,7 +56,7 @@ format.
 
 - The transparent path is a stated capability
   ([value-proposition.md](../product/value-proposition.md)): `.fb2.zip` handling
-  is one of the four things analogues lack, and it stops being one if the caller
+  is one of the things analogues lack, and it stops being one if the caller
   has to unwrap by hand.
 - A format parser must not acquire transport responsibilities, or a third format
   arriving in a wrapper repeats the work inside a second parser.

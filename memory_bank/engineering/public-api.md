@@ -288,8 +288,9 @@ static finals. The rule and its failure mode are in
 String normalizeLanguageCode(String? declared, {required String fallback});
 ```
 
-Takes the primary subtag of a BCP-47 value, lower-cases it, and returns it when
-it is in ISO-639-1; otherwise returns `fallback`.
+Takes the primary subtag of a BCP-47 value, lower-cases it, maps a 639-2/B code
+to its 639-1 equivalent, and returns the result when it is in ISO-639-1;
+otherwise returns `fallback`.
 
 Decided 2026-09-01, closing `OQ-24`: `normalizeLanguageCode` also carries a
 639-2/B-to-639-1 mapping table, so a file declaring `eng`, `deu` or `rus` —
@@ -343,7 +344,10 @@ in either as a miss. The version is also written into the encoded json by
 defends itself even when the consumer's bookkeeping fails (`OQ-20`, closed
 2026-09-01). A `null` from `decodeBookDocument` therefore has three documented
 causes — unreadable json, a schema-version mismatch, an unresolved image
-reference — and the doc comment names all three.
+reference — and the doc comment names all three. `encodeBlock` embeds the same
+version in each encoded block and `decodeBlock` checks it identically — the
+block codec exists for consumers storing blocks individually, which is where
+version drift is likeliest.
 
 Two things stay out of the json, for two different reasons.
 
