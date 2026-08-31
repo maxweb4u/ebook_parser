@@ -31,7 +31,14 @@ Already built in TeaderBook and typically missing elsewhere:
 - `.fb2.zip` — the normal distribution form for FB2 — unpacked transparently;
 - a cheap metadata-only path: title, author, language, cover without walking chapters;
 - lazy segmentation into sentences and words — per paragraph, on first access,
-  rather than over the whole book up front.
+  rather than over the whole book up front, across every writing system rules
+  can honestly serve and with a port for callers who need more;
+- a JSON codec for the model, behind a second import, so a consumer gets a parse
+  cache without writing one.
 
-The last point is why a multi-megabyte book opens fast, and it belongs in the
+Lazy segmentation is why a multi-megabyte book opens fast, and it belongs in the
 README as a stated feature rather than an implementation detail.
+
+Archive inspection is more than transparent unwrapping: a zip holding nothing
+readable and a zip holding three books are different answers, and both reach the
+caller instead of becoming a parse failure or a silent guess.

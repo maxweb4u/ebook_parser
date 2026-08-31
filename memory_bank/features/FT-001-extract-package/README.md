@@ -38,6 +38,34 @@ routing layer. Read `brief.md` first.
   Read when you need: to know why both formats return one model.
   Answers the question: what was traded away for convergence.
 
+The nine decisions taken on 2026-08-31, all of which change what `STEP-01`
+writes or what TeaderBook must be refactored to accept at `STEP-07`:
+
+- [`ADR-20260831T134825Z`](../../adr/ADR-20260831T134825Z-own-epub-reader.md) —
+  the package reads EPUB itself instead of depending on `epubx`. Answers: what
+  that costs and why the `archive` pin decided it.
+- [`ADR-20260831T134925Z`](../../adr/ADR-20260831T134925Z-script-driven-segmentation.md) —
+  segmentation is script-driven and replaceable. Answers: which writing systems
+  are served and where the honest ceiling is.
+- [`ADR-20260831T135025Z`](../../adr/ADR-20260831T135025Z-language-resolution.md) —
+  languages validated against all of ISO-639-1. Answers: why the app's catalog
+  does not come along and who narrows it.
+- [`ADR-20260831T135125Z`](../../adr/ADR-20260831T135125Z-raw-cover-bytes.md) —
+  covers returned as stored. Answers: why the cheap metadata path was not cheap.
+- [`ADR-20260831T135225Z`](../../adr/ADR-20260831T135225Z-model-excludes-pagination.md) —
+  pagination state leaves the model. Answers: why a consumer wraps rather than
+  extends.
+- [`ADR-20260831T135325Z`](../../adr/ADR-20260831T135325Z-optional-serialization-library.md) —
+  serialization behind a second import. Answers: who versions the encoded shape.
+- [`ADR-20260831T135425Z`](../../adr/ADR-20260831T135425Z-archive-layer-is-public.md) —
+  the archive layer is exported. Answers: why `REQ-04` depends on it.
+- [`ADR-20260831T140218Z`](../../adr/ADR-20260831T140218Z-parse-result-type.md) —
+  expected failures are returned, not thrown. Answers: why the cases are prefixed
+  and what `kind` carries that `message` must not.
+- [`ADR-20260831T144622Z`](../../adr/ADR-20260831T144622Z-inline-images-are-extracted.md) —
+  both readers emit inline images. Answers: why a sealed model may not ship a
+  variant nothing produces.
+
 `design.md` is absent by decision: `brief.md` records `Design required: no`
 because architecture, the exported surface, and both decisions are owned
 upstream and only applied here.
