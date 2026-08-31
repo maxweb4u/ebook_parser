@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "memorybank": {
+      "command": "node",
+      "args": [
+        "/Users/admin/Documents/docs/__projects/__my/mcp/memorybank/dist/cli.js",
+        "--root",
+        "/Users/admin/Documents/docs/__projects/__my/modules/ebook_parser/memory_bank"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/admin/Documents/docs/__projects/__my/mcp/memorybank/hooks/capture-to-inbox.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
