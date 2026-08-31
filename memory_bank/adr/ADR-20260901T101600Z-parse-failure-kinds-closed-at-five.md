@@ -85,6 +85,14 @@ The distinction is the whole content of this decision. "An `encryption.xml`
 exists" is the obvious test and the wrong one — it would refuse well-produced
 books that merely obfuscate their embedded fonts.
 
+Amended 2026-09-01, closing `OQ-27`: the container check runs on **both**
+methods — `parseMetadata` returns `drmProtected` exactly as `parse` does.
+Metadata in a protected EPUB is usually readable, so without this the cheap
+path would succeed where the full path refuses, and an import flow would show a
+card for a book that cannot be opened; `SC-13` compares only successful parses
+and cannot guard that divergence. Detection is one lookup in a container the
+metadata path already opens, so the cheap path stays cheap.
+
 `emptyDocument` is defined by
 [ADR-20260901T101700Z](ADR-20260901T101700Z-empty-document-means-no-blocks.md),
 not here.

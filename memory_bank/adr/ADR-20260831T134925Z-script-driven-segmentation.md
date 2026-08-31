@@ -21,7 +21,7 @@ audience: humans_and_agents
 
 ## Context
 
-Lazy segmentation into sentences and words is one of the four things the package
+Lazy segmentation into sentences and words is one of the things the package
 claims analogues lack. The implementation being extracted is 39 lines and two
 regular expressions: sentences are runs ending in `.!?…` followed by whitespace
 or end of text, words are Unicode letter/number runs allowing inner apostrophes

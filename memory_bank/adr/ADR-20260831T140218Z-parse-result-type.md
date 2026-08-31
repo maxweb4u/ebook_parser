@@ -90,9 +90,15 @@ which format, which reader, or which stage failed, and that is the first thing
 anyone debugging a rejected book needs.
 
 `ParseFailure` is not sealed and `ParseFailureKind` is an enum rather than a
-sealed hierarchy: a consumer branching on it usually wants a default case, and
-adding a fifth cause should not break every call site the way a new `Block`
-variant deliberately does.
+sealed hierarchy: a consumer branching on it usually wants a default case. The
+second half of this sentence originally read "and adding a fifth cause should
+not break every call site the way a new `Block` variant deliberately does" —
+amended 2026-09-01 rather than quietly deleted: that premise is Dart 2
+reasoning, false for the Dart 3 the package targets, where a `switch`
+expression over an enum is exhaustive exactly as over a sealed class. The enum
+stands on ergonomics alone, and the set is closed for the major version by
+[ADR-20260901T101600Z](ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md),
+which also adds the fifth kind, `drmProtected`.
 
 ## Consequences
 
@@ -113,7 +119,10 @@ variant deliberately does.
   against a mistake the doc comment names explicitly.
 - `ParseOk`/`ParseErr` are more verbose than `Ok`/`Err` at every match.
 - A closed `kind` enum means a genuinely new failure cause has to be squeezed
-  into an existing value or wait for a minor release.
+  into an existing value or wait for a major release — not the minor release
+  this bullet originally promised: in Dart 3 a new constant breaks exhaustive
+  switches
+  ([ADR-20260901T101600Z](ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md)).
 
 ### Neutral / Organizational
 

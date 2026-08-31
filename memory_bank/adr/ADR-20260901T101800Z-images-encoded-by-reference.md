@@ -128,7 +128,7 @@ bytes cannot be. That is why they are handed back rather than dropped.
   would not have.
 - The API is less obvious than `toJson`/`fromJson`, and the record return is
   unusual enough to need an example in the README.
-- `blockToJson`/`blockFromJson` inherit the same shape, so a consumer storing
+- `encodeBlock`/`decodeBlock` inherit the same shape, so a consumer storing
   something block-shaped of its own carries the map too.
 
 ### Neutral / Organizational

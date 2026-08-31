@@ -339,6 +339,12 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md)
   and as the exception in
   [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md).
+- `DEC-32` **Settled 2026-09-01** — the DRM container check runs on both
+  methods: `parseMetadata` returns `drmProtected` exactly as `parse` does, so
+  the cheap path cannot put an unopenable book into a consumer's library.
+  Closes `OQ-27`; recorded as an amendment to
+  [ADR-20260901T101600Z](../../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md)
+  and in [public-api.md](../../engineering/public-api.md).
 
 ## Verify
 

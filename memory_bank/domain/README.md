@@ -14,6 +14,4 @@ Read when you need the project’s language, entities, rules, or state semantics
 
 ## Registry
 
-Empty. A first document of this kind is registered here.
-
 - [Document Model](model.md) — The canonical model both EPUB and FB2 converge on — document, chapter, block, sentence, word — and why Block is sealed.

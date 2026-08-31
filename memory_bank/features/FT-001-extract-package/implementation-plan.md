@@ -68,12 +68,13 @@ under `lib/src/` and total 916 lines, counted rather than estimated.
 
 | Test surface | Canonical refs | Existing coverage | Planned automated coverage | Required local suites | Manual-only gap |
 | --- | --- | --- | --- | --- | --- |
-| both parsers, happy path | `SC-01`, `CHK-01` | `test/book_parsing_test.dart` (149 lines), FB2 and factory only — builds its books inline, uses `flutter_test` | fixture-backed test per format, on `package:test` | `dart test` | none |
+| both parsers, happy path | `SC-01`, `CHK-01` | `test/book_parsing_test.dart` (149 lines), FB2 and factory only — builds its books inline, uses `flutter_test` | fixture-backed test per format, on `package:test`, with cover bytes asserted byte-identical to the bytes stored in the fixture — the round-trip-unmodified test [ADR-20260831T135125Z](../../adr/ADR-20260831T135125Z-raw-cover-bytes.md) promises (`DEC-04`) | `dart test` | none |
 | archive handling | `SC-02`, `CHK-01` | `test/book_archive_test.dart` (131 lines), zips built inline | `.fb2.zip` vs unpacked `.fb2` equality | `dart test` | none |
 | format detection | `SC-03`, `CHK-01` | none in package form | wrong / absent extension routed by magic bytes | `dart test` | none |
-| failure paths | `NEG-01`, `CHK-01` | none in package form | corrupt fixture returns `Err`, never throws | `dart test` | none |
-| DRM and font obfuscation | `NEG-01`, `CHK-01` | none | generated fixtures: an `encryption.xml` naming a content document yields `drmProtected`; one naming a font resource parses normally | `dart test` | whether a real ADEPT file behaves the same — the corpus has none |
+| failure paths | `NEG-01`, `CHK-01` | none in package form | corrupt fixture returns `Err`, never throws; hostile XML — deep nesting and entity-expansion bombs — either parses or returns `ParseErr` in bounded time, pinning what `package:xml` actually does with entities rather than assuming it | `dart test` | none |
+| DRM and font obfuscation | `NEG-01`, `CHK-01` | none | generated fixtures: an `encryption.xml` naming a content document yields `drmProtected` from **both** `parse` and `parseMetadata` (`DEC-32`); one naming a font resource parses normally on both. An `encryption.xml` covering only images falls under the content rule — refused — and needs no third fixture unless a real file shows up | `dart test` | whether a real ADEPT file behaves the same — the corpus has none |
 | empty and image-only documents | `SC-09`, `CHK-01` | none | a document with no blocks anywhere returns `emptyDocument`; an image-only book parses and its `bodySample` is `''` | `dart test` | none |
+| `bodySample` behaviour | `CHK-01` | none — exported surface, so [testing-policy.md](../../engineering/testing-policy.md) requires it | collects paragraph text forward from the body start, skips headings, respects `maxChars`; the `''` case is the row above | `dart test` | none |
 | lazy segmentation | `SC-05`, `CHK-01` | none | assert segmentation has not run before the getter is touched | `dart test` | none |
 | equality | `SC-01`, `CHK-01` | none | `Sentence` and `Word` behave as values in a `Set`; the paragraph-level types and `BookMetadata` do not, so the asymmetry is pinned rather than assumed; a paragraph in an unruled script (Thai) yields sentences with empty `words` (`DEC-30`) | `dart test` | none |
 | inline images | `SC-09`, `NEG-02`, `CHK-01` | none — no parser emits `ImageBlock` today | illustrated book of each format yields typed image blocks in order; unresolvable image skipped, book still parses | `dart test` | none |
@@ -117,7 +118,8 @@ recorded, not acted on.
 
 This is again the only open question left. `OQ-26`, opened on 2026-09-01 by a
 third review pass that read the chapter-splitting rules against the
-empty-chapter rule, was settled the same day as `DEC-31`. Seven more
+empty-chapter rule, was settled the same day as `DEC-31`; `OQ-27`, opened by a
+fifth pass that walked usage scenarios end to end, closed as `DEC-32`. Seven more
 (`OQ-19`..`OQ-25`) were opened earlier that day by a second architecture
 review — the parallel pass
 [processes/review-decisions-against-each-other.md](../../processes/review-decisions-against-each-other.md)
@@ -155,6 +157,7 @@ settled.
 | `OQ-24` | ISO-639-2 declarations | A 639-2/B→639-1 mapping table joins `normalizeLanguageCode`; `eng`/`deu`/`rus` resolve to the declared language, and the known limitation closes. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-29`). |
 | `OQ-25` | `Sentence.words` with no word rule | The empty list — no rule means no words, not one sentence-wide word; contract-relevant because `Sentence.==` compares `words` element-wise. Recorded in [domain/model.md](../../domain/model.md) (`DEC-30`). |
 | `OQ-26` | Navigation anchors sharing a split point | Every entry still yields a chapter: the shallower ones keep `title` and `level` with no blocks, exempt from the empty-chapter drop — that rule aims at junk structure, not at the table of contents. Rule 9 in [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md), the exception in [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md) (`DEC-31`). |
+| `OQ-27` | Does `parseMetadata` detect DRM? | Yes — both methods check the container declaration and return `drmProtected`, so the cheap path cannot put an unopenable book into a consumer's library; one lookup in a container the metadata path already opens. Amendment in [ADR-20260901T101600Z](../../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md) (`DEC-32`). |
 
 ## Work Order
 
@@ -193,7 +196,7 @@ settled.
   `emptyDocument` means. The fifth, the FB2 metadata cost, was not a contract and
   could have waited; it was taken now anyway rather than publishing a method whose
   name promises what it does not deliver for one of two formats.
-- `STEP-00e` (`DEC-24`..`DEC-31`) — **Done 2026-09-01.** A fourth decision pass,
+- `STEP-00e` (`DEC-24`..`DEC-32`) — **Done 2026-09-01.** A fourth decision pass,
   closing the seven questions a second parallel review found — this time in the
   seams between ADRs and the canonical engineering documents rather than between
   ADR pairs. One (`OQ-19`) was resolved by scoping a promise instead of changing
@@ -204,7 +207,10 @@ settled.
   639-2 mapping table, and empty `words` for unruled scripts. A third pass the
   same day added `DEC-31`: reading the chapter-splitting rules against the
   empty-chapter rule showed their composition silently deleting navigation
-  entries that share an anchor, now rule 9 of the granularity ADR.
+  entries that share an anchor, now rule 9 of the granularity ADR. A fifth
+  pass walked usage scenarios end to end and added `DEC-32`: the DRM container
+  check runs on `parseMetadata` as well as `parse`, so an import cannot shelve
+  a book that will refuse to open.
 
 - `STEP-01` (`REQ-01`) — Copy the code from all four source locations named in
   Current State into the layout owned by
@@ -225,6 +231,10 @@ settled.
   Unnavigated documents become untitled chapters, except one the format declares
   to be the table of contents
   ([ADR-20260831T184812Z](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md)).
+  The reader also performs the DRM container check — `META-INF/encryption.xml`
+  covering publication resources, or `META-INF/rights.xml` — returning
+  `drmProtected` from both `parse` and `parseMetadata` (`DEC-32`), while a file
+  that only obfuscates fonts parses normally.
   Roughly 550-600 lines, the largest single piece of work in the feature. `epubx`
   stays available as a reference implementation to compare against while it is
   written, and is removed from the dependency list once it is not.
@@ -300,6 +310,16 @@ settled.
     with a test (`DEC-03`);
   - display call sites moved onto the nested metadata: `authors` joined for
     display and a fallback supplied where `title` is null (`DEC-13`);
+  - the five failure kinds mapped to the app's own localised strings, keyed by
+    `kind`, replacing the single English string its parsers produce today
+    (`DEC-20`). Promised "at `STEP-07`" by
+    [ADR-20260831T140218Z](../../adr/ADR-20260831T140218Z-parse-result-type.md)
+    and by the `DEC-20` entry in `brief.md`, but carried by no step until the
+    review of 2026-09-01;
+  - the chapter-list UI given a fallback for `title == null` — untitled front
+    matter is now a normal occurrence (`DEC-18`) — and the reader and paginator
+    taught to meet a chapter with zero blocks, which `DEC-31` makes possible
+    where the source never produced one;
   - **reading positions migrated or deliberately reset** (`DEC-17`). The brief
     already records that chapter counts change and that index-keyed positions are
     invalidated, but no step owned it, and this is the one item on this list that

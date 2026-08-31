@@ -62,6 +62,14 @@ Normalization takes the primary subtag of a BCP-47 value and lower-cases it, so
 `en-US` becomes `en` and `zh_Hans` becomes `zh`. An absent, empty, or unknown
 value yields the fallback.
 
+Amended 2026-09-01, closing `OQ-24` and `OQ-23`: normalization also maps an
+ISO-639-2/B code to its 639-1 equivalent before validating — `eng`, `deu` and
+`rus` from older toolchains resolve to the language they declare rather than to
+the fallback — and `fallbackLanguageCode` itself is held to the same contract,
+throwing `ArgumentError` when it does not reduce to ISO-639-1. Both are
+recorded with their reasoning in [public-api.md](../engineering/public-api.md)
+(`DEC-29`, `DEC-28`).
+
 The validation set is the full ISO-639-1 code list — codes only, no display
 names and no localisation. Narrowing to what a particular application supports
 is the caller's job, done at the call site where the application's own catalog

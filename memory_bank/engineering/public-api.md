@@ -104,7 +104,11 @@ the container, the OPF and one manifest entry. FB2 is a single XML document whos
 reach the cover — the metadata reader therefore streams, capturing
 `<description>` and then skipping to the one `<binary>` the coverpage names
 ([ADR-20260901T101900Z](../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md)).
-`parseMetadata` means the same thing whichever format it is given.
+`parseMetadata` means the same thing whichever format it is given. It also
+fails the same way: a DRM-protected EPUB returns `drmProtected` from
+`parseMetadata` as well as from `parse` (`OQ-27`, closed 2026-09-01) — metadata
+in such a file is usually readable, and a cheap path that succeeded where the
+full path refuses would put unopenable books into consumers' libraries.
 
 `fallbackLanguageCode` is required, not defaulted. A book that declares no
 language is common, and the caller is the only party that knows what to assume.
@@ -275,6 +279,17 @@ script supplies one instead of forking the package
 ([ADR-20260831T134925Z](../adr/ADR-20260831T134925Z-script-driven-segmentation.md)).
 `languageCode` exists for the cases rules cannot infer from the text — modern
 Greek's ASCII `;` question mark being the standing example.
+
+The default is a contract, not an implementation detail: with `segmenter`
+omitted, `parse` uses exactly
+`RuleBasedSegmenter(languageCode: <the document's resolved language>)`, with no
+other configuration. That matters because a consumer sometimes has to
+reconstruct it — `ParagraphBlock` does not expose the segmenter it holds, and
+`decodeBlock` cannot seed itself (see Serialization below) — so building that
+same expression from `metadata.sourceLanguageCode` yields the identical
+segmenter by contract rather than by coincidence. If the internal default ever
+gains configuration beyond the language seed, that is a behaviour change to
+this contract, not a private tweak.
 
 An implementation must hold plain data only. It travels inside every paragraph it
 segments, so a non-sendable field — a compiled `RegExp` most of all — stops the

@@ -134,7 +134,10 @@ hour later by timestamp. What the encoded form does with image bytes is decided
 by [ADR-20260901T101800Z](ADR-20260901T101800Z-images-encoded-by-reference.md),
 which keeps them out of the json and hands them to the caller. The separate-library
 decision recorded here is unaffected; only the encode and decode signatures
-changed.
+changed. The forgotten-bump risk below also gained a second mitigation after
+this was written: the schema version is embedded in the encoded json and
+checked on decode (`DEC-25`,
+[public-api.md](../engineering/public-api.md)).
 
 ## Related Links
 
