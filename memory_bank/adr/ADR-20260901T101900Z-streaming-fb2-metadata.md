@@ -141,10 +141,16 @@ by a test rather than by care: `SC-13` already compares `parse().metadata` again
 stops being a formality and becomes the guard that keeps them equal. It runs over
 the golden fixtures and over all four derived encoding fixtures.
 
-Second risk: the streaming reader mishandles a file whose `<coverpage>` names a
-binary that does not exist, or whose binaries precede `<description>`. Both fall
-back to no cover rather than to a failure, matching what a missing cover already
-does.
+Second risk: the streaming reader meets a file whose `<coverpage>` names a
+binary that does not exist, or whose binaries precede `<description>`. The
+earlier wording here gave both cases the same fallback — no cover — and that was
+wrong about the second: the DOM path finds such a cover, so the fallback breaks
+`SC-13` precisely on the files no fixture covers. Corrected on 2026-09-01,
+closing `OQ-22`: a named binary that does not exist is no cover on both paths;
+a named binary not yet seen when the first pass ends gets a second targeted
+pass that streams straight to it — still no DOM over the body, and element
+order can no longer separate the two FB2 paths. A reordered fixture joins the
+`SC-13` set.
 
 ## Follow-up
 

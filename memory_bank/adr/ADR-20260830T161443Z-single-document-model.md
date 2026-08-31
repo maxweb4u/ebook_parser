@@ -77,6 +77,14 @@ reintroduces format branching in consumer code while appearing not to.
 - Adding a third format is additive — a new parser, no consumer changes — which
   is what the format-neutral package name assumes
   ([ADR-20260830T161251Z](ADR-20260830T161251Z-package-name-ebook-parser.md)).
+  Scoped on 2026-09-01, closing `OQ-19`: the promise holds for formats that are
+  not zip containers. A zip-native format — FB3, CBZ — needs a new case in the
+  sealed `ArchiveContent`
+  ([ADR-20260831T135425Z](ADR-20260831T135425Z-archive-layer-is-public.md)),
+  which is a breaking change by design. Generalising `EpubArchive` into a
+  format-tagged container case was considered and declined: the named case's
+  ergonomics today were preferred, and the major-version cost of a future
+  container format is accepted knowingly rather than discovered.
 
 ### Negative
 

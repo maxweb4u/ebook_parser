@@ -69,6 +69,13 @@ preserved, structure is not. The construct-by-construct table is
 
 Below a paragraph sit two segmentation types. A `Sentence` carries `text`,
 `start`, `end`, and its `words`; a `Word` carries `text`, `start`, and `end`.
+For the scripts the built-in rules deliberately carry no word rule for — Thai,
+Khmer, Lao, Burmese
+([ADR-20260831T134925Z](../adr/ADR-20260831T134925Z-script-driven-segmentation.md)) —
+`words` is the empty list: no rule means no words, not one sentence-wide word
+pretending to be one (`OQ-25`, closed 2026-09-01). The distinction is
+contract-relevant because `Sentence.==` compares `words` element-wise, and the
+doc comment states it so an empty list reads as honesty rather than as a bug.
 
 ## A Paragraph Holds Its Segmenter
 

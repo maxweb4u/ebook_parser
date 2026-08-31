@@ -111,6 +111,14 @@ seen — a sixth case appearing after publication forces a breaking release.
 Mitigated by publishing at `0.1.0`, where breaking changes are expected, and by
 the fact that the five cases are drawn from production use rather than guessed.
 
+One sixth case is not hypothetical, and is accepted rather than mitigated:
+`EpubArchive` names a format, so any future zip-native format — FB3, CBZ —
+requires a new case and therefore a major version. Raised as `OQ-19` by the
+2026-09-01 review, and decided against generalising the case into a
+format-tagged container: the additive-format promise in
+[ADR-20260830T161443Z](ADR-20260830T161443Z-single-document-model.md) is scoped
+to non-zip formats instead.
+
 ## Follow-up
 
 - `engineering/architecture.md` corrects the "never public" description of

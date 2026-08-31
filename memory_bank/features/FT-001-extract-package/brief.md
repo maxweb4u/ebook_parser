@@ -296,6 +296,40 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   `XmlDocument.parse(_decode(bytes))` inside the metadata path. Not an `NS-03`
   deviation: the results are identical and only the cost changes. The price is a
   second FB2 reading path, which `SC-13` guards.
+- `DEC-24` **Settled 2026-09-01** — `ArchiveContent` keeps its five named cases,
+  and the additive-format promise is scoped to non-zip formats: a future
+  zip-native format (FB3, CBZ) costs a major version, knowingly. Closes `OQ-19`;
+  recorded as amendments to
+  [ADR-20260830T161443Z](../../adr/ADR-20260830T161443Z-single-document-model.md)
+  and
+  [ADR-20260831T135425Z](../../adr/ADR-20260831T135425Z-archive-layer-is-public.md).
+- `DEC-25` **Settled 2026-09-01** — `encode` writes `kBookDocumentSchemaVersion`
+  into the json and `decode` checks it, returning `null` on a mismatch; the
+  three causes of a `null` decode are documented. Closes `OQ-20`; recorded in
+  [public-api.md](../../engineering/public-api.md).
+- `DEC-26` **Settled 2026-09-01** — `decodeBookDocument` without a segmenter
+  seeds the default from the decoded `metadata.sourceLanguageCode`, matching
+  `parse`; `decodeBlock` cannot, and its doc comment says so. Closes `OQ-21`;
+  recorded in [public-api.md](../../engineering/public-api.md), with `SC-12`
+  extended onto a fixture in a language where the rules diverge.
+- `DEC-27` **Settled 2026-09-01** — the streaming FB2 metadata reader is
+  order-agnostic: a named cover binary not seen by the end of the first pass
+  gets a second targeted pass, so element order cannot separate the two FB2
+  paths. Closes `OQ-22`; recorded in
+  [ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md),
+  whose earlier no-cover fallback for this case is corrected there.
+- `DEC-28` **Settled 2026-09-01** — `fallbackLanguageCode` is normalized like a
+  declared value and throws `ArgumentError` when it does not reduce to
+  ISO-639-1: a caller contract violation, not an expected failure. Closes
+  `OQ-23`; recorded in [public-api.md](../../engineering/public-api.md).
+- `DEC-29` **Settled 2026-09-01** — `normalizeLanguageCode` carries a
+  639-2/B→639-1 mapping table, so `eng`/`deu`/`rus` resolve to the declared
+  language instead of the fallback. Closes `OQ-24` and the known limitation
+  recorded in [public-api.md](../../engineering/public-api.md).
+- `DEC-30` **Settled 2026-09-01** — `Sentence.words` is the empty list for
+  scripts with no word rule (Thai, Khmer, Lao, Burmese): no rule means no
+  words, not one sentence-wide word. Closes `OQ-25`; recorded in
+  [domain/model.md](../../domain/model.md).
 
 ## Verify
 
@@ -321,10 +355,12 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `SC-11` (`REQ-01`, `DEC-12`) — A parsed document survives `Isolate.run`,
   including with a caller-supplied segmenter.
 - `SC-12` (`REQ-01`, `DEC-06`) — parse, encode, decode: the restored document
-  segments identically to the original.
+  segments identically to the original — including with no segmenter passed to
+  decode, on a fixture in a language where the default rules diverge (`DEC-26`).
 - `SC-13` (`REQ-01`, `DEC-13`) — for the same bytes and the same
   `fallbackLanguageCode`, `parse(b).metadata` equals `parseMetadata(b)`, field by
-  field, with cover bytes asserted separately.
+  field, with cover bytes asserted separately — including over a reordered FB2
+  fixture whose binaries precede its `<description>` (`DEC-27`).
 - `SC-14` (`REQ-01`, `DEC-14`) — a book of each format containing a table, a
   list, verse and a quotation yields their text as paragraphs in document order;
   an FB2 with `<body name="notes">` yields its notes as trailing chapters.
@@ -351,9 +387,13 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   to its primary subtag (`en-GB`, `en-US`, `zh-Hans-CN`), lower-cases it, accepts
   any ISO-639-1 code, and returns the fallback for a value outside the standard.
   The corpus supplies `en-GB` and `en-US`, which is what the function exists for.
+  A 639-2/B code maps to its 639-1 equivalent (`DEC-29`), and a
+  `fallbackLanguageCode` that does not reduce to ISO-639-1 throws
+  `ArgumentError` (`DEC-28`).
 - `SC-21` (`REQ-01`, `DEC-06`) — a golden encoded document is asserted against
   the current `kBookDocumentSchemaVersion`, so a change to the encoded shape
-  fails until the version moves with it. Required by
+  fails until the version moves with it; decoding a document whose embedded
+  version does not match returns `null` (`DEC-25`). Required by
   [ADR-20260831T135325Z](../../adr/ADR-20260831T135325Z-optional-serialization-library.md)
   as the mitigation for a forgotten version bump; `SC-12` round-trips the codec
   but cannot detect that the shape changed.
@@ -382,7 +422,7 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
 - `CHK-06` (`REQ-04`, `SC-08`) — TeaderBook test suite green with the local
   parsing directory deleted.
 - `CHK-07` (`REQ-01`, `STOP-04`) — the reader is run over the whole local corpus
-  — 186 EPUB and 211 FB2 — and every file parses without throwing and without
+  — 188 EPUB (177 local plus 11 fetched) and 211 FB2 — and every file parses without throwing and without
   `ParseErr`, with the per-file chapter and block counts recorded. This is the
   only check that exercises `STOP-04`, whose condition is "the reader fails on a
   whole producer's output": no fixture set can state that, and the corpus has so

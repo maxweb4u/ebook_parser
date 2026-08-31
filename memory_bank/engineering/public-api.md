@@ -291,13 +291,21 @@ String normalizeLanguageCode(String? declared, {required String fallback});
 Takes the primary subtag of a BCP-47 value, lower-cases it, and returns it when
 it is in ISO-639-1; otherwise returns `fallback`.
 
-One consequence is worth weighing before `0.1.0`: a file declaring an ISO-639-2
-code — `eng`, `deu`, `rus`, which older conversion toolchains do emit — is not in
-ISO-639-1, so it silently becomes the caller's fallback instead of the language
-the file actually declared. No file in the corpus does this, so the frequency is
-unmeasured here and the risk is judged rather than counted; against that, a
-639-2/B-to-639-1 table is about twenty lines and settles it permanently. Recorded
-as a known limitation, not yet a decision. The package validates against
+Decided 2026-09-01, closing `OQ-24`: `normalizeLanguageCode` also carries a
+639-2/B-to-639-1 mapping table, so a file declaring `eng`, `deu` or `rus` —
+which older conversion toolchains do emit — resolves to the language it declared
+rather than silently becoming the caller's fallback. The gap had been recorded
+here as a metadata limitation, but it was also a segmentation defect: the
+fallback seeds the default segmenter, so a mislabelled language meant the wrong
+segmentation rules. No corpus file declares a 639-2 code, so the mapping is
+guarded by a generated fixture rather than a golden one.
+
+`fallbackLanguageCode` itself has a contract (`OQ-23`, closed 2026-09-01): it is
+normalized exactly like a declared value, and a fallback that does not reduce to
+ISO-639-1 throws `ArgumentError`. That is a contract violation by the caller,
+not an expected parse outcome, so it throws rather than arriving as a
+`ParseErr` — a silently accepted bad fallback would poison `sourceLanguageCode`
+and the segmenter seeding of every book parsed with it. The package validates against
 the whole standard and holds no application's supported-language list; narrowing
 is the caller's, at the call site where its own catalog already lives
 ([ADR-20260831T135025Z](../adr/ADR-20260831T135025Z-language-resolution.md)).
@@ -330,7 +338,12 @@ A separate library, so a caller that only parses never sees it
 ([ADR-20260831T135325Z](../adr/ADR-20260831T135325Z-optional-serialization-library.md)).
 `kBookDocumentSchemaVersion` describes the shape of the model, not a cache
 policy: a consumer stores it beside its own cache version and treats a mismatch
-in either as a miss.
+in either as a miss. The version is also written into the encoded json by
+`encode` and checked by `decode`, which returns `null` on a mismatch — the codec
+defends itself even when the consumer's bookkeeping fails (`OQ-20`, closed
+2026-09-01). A `null` from `decodeBookDocument` therefore has three documented
+causes — unreadable json, a schema-version mismatch, an unresolved image
+reference — and the doc comment names all three.
 
 Two things stay out of the json, for two different reasons.
 
@@ -339,7 +352,14 @@ is what keeps the file small and the load cheap. Decoding takes a `segmenter` fo
 that reason: a segmenter cannot be represented in JSON, so without it a document
 restored from cache would segment differently from the same document straight out
 of the parser — silently, and only in the languages where the rules diverge. Pass
-the same one `parse` was given.
+the same one `parse` was given. Omitted, `decodeBookDocument` seeds the default
+segmenter from the decoded `metadata.sourceLanguageCode` — the same seeding
+`parse` performs — so the default-to-default round trip segments identically by
+construction (`OQ-21`, closed 2026-09-01). `decodeBlock` has no metadata to read
+a language from, so a lone block decoded without a segmenter gets the unseeded
+default; a consumer restoring blocks of a non-Latin book supplies
+`RuleBasedSegmenter(languageCode: ...)` itself, and that limitation is
+documented on `decodeBlock` rather than discovered.
 
 **Image bytes** are not encoded either, and are handed back to the caller instead
 ([ADR-20260901T101800Z](../adr/ADR-20260901T101800Z-images-encoded-by-reference.md)).

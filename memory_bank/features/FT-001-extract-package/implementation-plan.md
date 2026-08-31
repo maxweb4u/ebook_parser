@@ -75,19 +75,19 @@ under `lib/src/` and total 916 lines, counted rather than estimated.
 | DRM and font obfuscation | `NEG-01`, `CHK-01` | none | generated fixtures: an `encryption.xml` naming a content document yields `drmProtected`; one naming a font resource parses normally | `dart test` | whether a real ADEPT file behaves the same — the corpus has none |
 | empty and image-only documents | `SC-09`, `CHK-01` | none | a document with no blocks anywhere returns `emptyDocument`; an image-only book parses and its `bodySample` is `''` | `dart test` | none |
 | lazy segmentation | `SC-05`, `CHK-01` | none | assert segmentation has not run before the getter is touched | `dart test` | none |
-| equality | `SC-01`, `CHK-01` | none | `Sentence` and `Word` behave as values in a `Set`; the paragraph-level types and `BookMetadata` do not, so the asymmetry is pinned rather than assumed | `dart test` | none |
+| equality | `SC-01`, `CHK-01` | none | `Sentence` and `Word` behave as values in a `Set`; the paragraph-level types and `BookMetadata` do not, so the asymmetry is pinned rather than assumed; a paragraph in an unruled script (Thai) yields sentences with empty `words` (`DEC-30`) | `dart test` | none |
 | inline images | `SC-09`, `NEG-02`, `CHK-01` | none — no parser emits `ImageBlock` today | illustrated book of each format yields typed image blocks in order; unresolvable image skipped, book still parses | `dart test` | none |
 | metadata path stays cheap | `SC-10`, `CHK-01` | none — the guarantee came from `epubx.openBook` and is now ours | instrumented, and now symmetric: `parseMetadata` builds no block content and materialises no manifest entry or `<binary>` but the cover, in **both** formats. For FB2 that means asserting the event reader never reaches the body | `dart test` | none |
 | isolate transport | `SC-11`, `CHK-01` | none | parse inside `Isolate.run`, including with a caller-supplied segmenter, and read the result back | `dart test` | none |
-| cache round trip | `SC-12`, `CHK-01` | `test/book_document_codec_test.dart` (64 lines) | parse, encode, decode with the returned image map, assert segmentation matches the original; plus an illustrated document decoded with an empty map returning `null` rather than a document with holes | `dart test` | none |
-| metadata invariant | `SC-13`, `CHK-01` | none — the two paths were never compared | `parse().metadata` equals `parseMetadata()` field by field, both formats, cover bytes asserted separately. Carries more weight for FB2 than the row suggests: with a DOM path and an event path it is the only guard on the two agreeing, so it runs over the four derived encoding fixtures as well as the goldens | `dart test` | none |
+| cache round trip | `SC-12`, `CHK-01` | `test/book_document_codec_test.dart` (64 lines) | parse, encode, decode with the returned image map, assert segmentation matches the original; plus an illustrated document decoded with an empty map returning `null` rather than a document with holes; plus a no-segmenter decode of a divergent-language fixture segmenting identically (`DEC-26`) and a version-mismatched json returning `null` (`DEC-25`) | `dart test` | none |
+| metadata invariant | `SC-13`, `CHK-01` | none — the two paths were never compared | `parse().metadata` equals `parseMetadata()` field by field, both formats, cover bytes asserted separately. Carries more weight for FB2 than the row suggests: with a DOM path and an event path it is the only guard on the two agreeing, so it runs over the four derived encoding fixtures as well as the goldens, and over a reordered fixture whose binaries precede the `<description>` (`DEC-27`) | `dart test` | none |
 | flattened constructs, note bodies | `SC-14`, `CHK-01` | none | table, list, verse and quotation yield their text as paragraphs in order; FB2 `<body name="notes">` yields trailing chapters | `dart test` | whether the flattened text still reads like the book — the corpus pass |
 | chapter list and depth | `SC-15`, `CHK-01` | none | nested navigation flattens to reading order with `level` set, both formats | `dart test` | none |
 | no synthetic headings | `SC-18`, `CHK-01` | none — the source does the opposite, and injects one | an EPUB with no heading tags yields no `HeadingBlock`; the navigation label appears only in `Chapter.title` | `dart test` | none |
 | archive layer, all cases | `SC-19`, `CHK-01` | one case, in `test/book_archive_test.dart` | each of the five `ArchiveContent` cases produced and distinguished | `dart test` | none |
-| language normalisation | `SC-20`, `CHK-01` | none | BCP-47 subtag reduction, ISO-639-1 acceptance, fallback for anything else | `dart test` | none |
+| language normalisation | `SC-20`, `CHK-01` | none | BCP-47 subtag reduction, ISO-639-1 acceptance, 639-2/B mapping (`DEC-29`), `ArgumentError` on a fallback that does not reduce to ISO-639-1 (`DEC-28`), fallback for anything else | `dart test` | none |
 | encoded shape pinned | `SC-21`, `CHK-01` | none | golden encoded document asserted against `kBookDocumentSchemaVersion` | `dart test` | none |
-| the whole corpus parses | `CHK-07`, `STOP-04` | none — the corpus has only ever been surveyed, never parsed | 186 EPUB and 211 FB2 parsed: no throw, no `ParseErr`, chapter and block counts recorded | local corpus runner, not CI | which files parse *well* rather than merely without error — spot-read against the survey's structure counts |
+| the whole corpus parses | `CHK-07`, `STOP-04` | none — the corpus has only ever been surveyed, never parsed | 188 EPUB (177 local + 11 fetched) and 211 FB2 parsed: no throw, no `ParseErr`, chapter and block counts recorded | local corpus runner, not CI | which files parse *well* rather than merely without error — spot-read against the survey's structure counts |
 | pure-Dart resolution | `SC-06`, `CHK-02` | none | scratch project resolve + test | `dart pub get`, `dart test` | none |
 | decoupling | `SC-07`, `CHK-03` | none | grep gate over `lib/` | `CHK-03` command | none |
 | TeaderBook migration | `SC-08`, `CHK-06` | app suite exists | app suite green with local copy deleted | app test suite | none |
@@ -115,9 +115,14 @@ use." So the only instrument that would close `OQ-02` early is bringing
 Constraints currently forbid. Left as it is by decision; the question is
 recorded, not acted on.
 
-This is the only open question left. The five raised by the architecture review
-of 2026-08-31 were settled as `STEP-00d` on 2026-09-01 and are in the table
-below.
+This is again the only open question left. Seven more (`OQ-19`..`OQ-25`) were
+opened on 2026-09-01 by a second architecture review — the parallel pass
+[processes/review-decisions-against-each-other.md](../../processes/review-decisions-against-each-other.md)
+prescribes, run over the accepted ADRs and the canonical engineering documents;
+each sat in a seam between two documents rather than inside either one. All
+seven were settled the same day as `STEP-00e` and are in the table below,
+alongside the five the first review of 2026-08-31 raised and `STEP-00d`
+settled.
 
 ### Closed
 
@@ -139,6 +144,13 @@ below.
 | `OQ-16` | Do the model's value types define `==`? | `Sentence` and `Word` only; every other type keeps identity with a recorded reason: [ADR-20260901T101500Z](../../adr/ADR-20260901T101500Z-value-equality-on-spans-only.md). |
 | `OQ-17` | What is an `emptyDocument`, and are empty chapters dropped? | No `Block` in any chapter, not "no text" — so an image-only book parses; empty chapters are dropped, keeping `Chapter.index` dense: [ADR-20260901T101700Z](../../adr/ADR-20260901T101700Z-empty-document-means-no-blocks.md). |
 | `OQ-18` | Is the FB2 metadata path allowed to read the whole file? | No — it streams with `parseEvents` to `<description>` and then to the one `<binary>` the coverpage names, so `parseMetadata` is cheap for both formats: [ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md). The cost accepted is a second FB2 reading path, guarded by `SC-13`. |
+| `OQ-19` | Zip-native formats vs the sealed `ArchiveContent` | The five named cases stay; the additive-format promise is scoped to non-zip formats, and a future zip-native format (FB3, CBZ) costs a major version, knowingly. Generalising `EpubArchive` into a format-tagged case was considered and declined. Amendments in [ADR-20260830T161443Z](../../adr/ADR-20260830T161443Z-single-document-model.md) and [ADR-20260831T135425Z](../../adr/ADR-20260831T135425Z-archive-layer-is-public.md) (`DEC-24`). |
+| `OQ-20` | Schema version in the encoded json | Written by `encode`, checked by `decode`, which returns `null` on a mismatch; the three causes of a `null` decode are documented. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-25`). |
+| `OQ-21` | Default segmenter on decode | `decodeBookDocument` seeds the default from the decoded `metadata.sourceLanguageCode`, matching `parse`; `decodeBlock` cannot and its doc comment says so; `SC-12` gains a divergent-language, no-segmenter round trip. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-26`). |
+| `OQ-22` | FB2 metadata reader vs element order | Order-agnostic: a named cover binary unseen after the first pass gets a second targeted pass — still no DOM; the ADR's earlier no-cover fallback for this case is corrected, and a reordered fixture joins the `SC-13` set. Recorded in [ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md) (`DEC-27`). |
+| `OQ-23` | Contract on `fallbackLanguageCode` | Normalized like a declared value; `ArgumentError` when it does not reduce to ISO-639-1 — a caller contract violation, not an expected failure. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-28`). |
+| `OQ-24` | ISO-639-2 declarations | A 639-2/B→639-1 mapping table joins `normalizeLanguageCode`; `eng`/`deu`/`rus` resolve to the declared language, and the known limitation closes. Recorded in [public-api.md](../../engineering/public-api.md) (`DEC-29`). |
+| `OQ-25` | `Sentence.words` with no word rule | The empty list — no rule means no words, not one sentence-wide word; contract-relevant because `Sentence.==` compares `words` element-wise. Recorded in [domain/model.md](../../domain/model.md) (`DEC-30`). |
 
 ## Work Order
 
@@ -177,6 +189,15 @@ below.
   `emptyDocument` means. The fifth, the FB2 metadata cost, was not a contract and
   could have waited; it was taken now anyway rather than publishing a method whose
   name promises what it does not deliver for one of two formats.
+- `STEP-00e` (`DEC-24`..`DEC-30`) — **Done 2026-09-01.** A fourth decision pass,
+  closing the seven questions a second parallel review found — this time in the
+  seams between ADRs and the canonical engineering documents rather than between
+  ADR pairs. One (`OQ-19`) was resolved by scoping a promise instead of changing
+  a type: `ArchiveContent` stays as it is and a zip-native format is accepted as
+  a major-version event. The rest tightened contracts before they freeze: the
+  codec's schema-version self-defence, decode-side segmenter seeding, an
+  order-agnostic FB2 metadata reader, the `fallbackLanguageCode` contract, the
+  639-2 mapping table, and empty `words` for unruled scripts.
 
 - `STEP-01` (`REQ-01`) — Copy the code from all four source locations named in
   Current State into the layout owned by
