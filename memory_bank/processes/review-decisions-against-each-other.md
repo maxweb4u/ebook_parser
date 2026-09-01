@@ -68,3 +68,19 @@ This is the sibling of
 [verify-source-behaviour-before-recording-it.md](verify-source-behaviour-before-recording-it.md).
 That one guards the premise an ADR rests on outside the bank; this one guards
 the premise it rests on inside it.
+
+The continuation this document predicted — reviewing the next artifact against
+the decisions — ran on 2026-09-01, and the measured yield curves are worth
+keeping because they cannot be re-derived without redoing the reviews. The
+architecture passes paid at falling rates: 12 defects (pass 1, ADRs against
+each other), 7 (pass 2, ADRs against the canonical engineering documents,
+`OQ-19`..`OQ-25`), 1 real defect (pass 3, previously unread ADRs in full plus
+the pass's own edits re-checked — three of its findings were pass 2's own
+closures, so a closure pass is itself review input). The granularity shrank
+each pass — documents, then document-against-canon, then *individual rules*
+composed across already-reviewed pairs — so the last hiding place is
+rule-by-rule composition. The code review that followed (seven adversarial
+passes over the STEP-01..05 implementation) repeated the shape: 4 → 7 → 7 → 3 →
+2 → 1 → 0 confirmed bugs, stopping at the first clean pass. Both series argue
+the same stopping rule: stop after a pass that finds only hygiene, and spend
+the next pass on the next artifact rather than on the same one again.

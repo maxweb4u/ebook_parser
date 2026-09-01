@@ -108,6 +108,40 @@ have something to be checked against.
   are still the characters. What mattered was the sentence terminator table, and
   Arabic now covers it (see below).
 
+### The Converter's Self-Closing `<title/>` (2026-09-01)
+
+The first full parse run over the local collection (CHK-07, STEP-05) failed
+172 of 178 local EPUBs as `emptyDocument` while all 139 fixture tests were
+green. The cause is producer-wide: the FB2-to-EPUB pipeline emits a
+self-closing `<title/>` in every chapter `<head>`. That is valid XHTML — but
+under the HTML5 parsing rules the package deliberately uses, `title` is a
+raw-text element, so the parser reads the rest of the document as its text and
+the body vanishes. This is a known polyglot-markup hazard: the W3C polyglot
+guideline forbids self-closing syntax for non-void elements
+(`title`/`script`/`style`/`textarea`) for exactly this reason, and converters
+violate it anyway. Handled by expanding such tags before parsing —
+`expandSelfClosingRcdata` in `lib/src/epub/xhtml_blocks.dart`, pinned in
+`test/regression_fixes_test.dart`. The standing lesson: a fixture suite
+structurally cannot find a whole-producer failure; only a corpus run can,
+which is what `STOP-04` exists to catch.
+
+The regex preprocessing is not a stopgap — alternatives were investigated on
+2026-09-01 and rejected, so do not redo the search. **XML-first** (try
+`XmlDocument.parse`, normalize, then HTML-parse): the affected producer's
+chapters are 100% well-formed XML (42/42 across three probed books), so it
+would work there, but package:xml's serializer re-emits an empty `<title>` as
+`<title/>` unless an empty text child is injected — and decisively, it is a
+second parsing path with an HTML fallback for malformed books, i.e. exactly
+the two-paths-that-must-agree disease the FB2 parity review spent a session
+curing. **Parse-then-detect-and-reparse**: detection is incomplete (a
+`<style/>` mid-body swallows only the tail, the body stays non-empty, the
+partial loss goes unnoticed) and it double-parses exactly the producer the
+corpus holds most of. The kept regex is industry practice (Calibre's input
+plugins do the same), measured at ~3 ms per 1 MB chapter with no pathological
+backtracking, and after review hardening handles quoted `>`, `<title />`, and
+`/>` inside attribute values; false positives are confined to comments and
+CDATA, where the expansion is harmless.
+
 ## Retail Output
 
 *Witchy Eye* (D. J. Butler, Baen Books) was downloaded from the publisher's own

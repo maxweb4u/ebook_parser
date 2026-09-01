@@ -2,10 +2,10 @@
 title: '2026-09-01 Review: Recommendations That Are Not Defects'
 doc_kind: engineering
 doc_function: canonical
-purpose: 'Read before hardening at STEP-01/STEP-03 or a post-0.1.0 API discussion: four improvements from the 2026-09-01 review that were deliberately not recorded as open questions.'
+purpose: 'Read before post-0.1.0 hardening or an API-evolution discussion: four improvements from the 2026-09-01 review that were deliberately not recorded as open questions.'
 derived_from:
-  - ../engineering/public-api.md
-status: draft
+  - public-api.md
+status: active
 ---
 # 2026-09-01 Review: Recommendations That Are Not Defects
 

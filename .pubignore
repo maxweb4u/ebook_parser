@@ -1,0 +1,8 @@
+# The golden fixtures total ~350 KB, past the ~150 KB budget for shipping
+# test/ to every consumer; they stay in the repository and out of the
+# published package. The memory bank and the corpus tooling are repository
+# concerns, not package contents.
+test/fixtures/
+memory_bank/
+corpus/
+CLAUDE.md

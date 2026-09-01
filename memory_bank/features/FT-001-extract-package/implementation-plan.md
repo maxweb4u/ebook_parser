@@ -212,83 +212,89 @@ settled.
   check runs on `parseMetadata` as well as `parse`, so an import cannot shelve
   a book that will refuse to open.
 
-- `STEP-01` (`REQ-01`) — Copy the code from all four source locations named in
-  Current State into the layout owned by
+- `STEP-01` (`REQ-01`) — **Done 2026-09-01.** Copy the code from all four source
+  locations named in Current State into the layout owned by
   [`../../engineering/architecture.md`](../../engineering/architecture.md), then clean imports:
   `package:readtolearn/...` becomes relative, the dependency on
   `core/consts/languages.dart` is removed per `DEC-03`, and references to
   `FT-001`/`FT-017`/`FT-019` and `memory_bank/adr/` paths go. Remove the path,
   keep the argument — a comment pointing nowhere is worse than no comment.
-  Gate: `CHK-03`.
-- `STEP-01a` (`REQ-01`, `DEC-02`, `DEC-16`) — Write the EPUB reader: container
-  lookup, OPF metadata/manifest/spine, NCX and EPUB 3 nav, chapter XHTML, cover
-  lookup. Navigation supplies `Chapter.title` and `level`; spine supplies reading
-  order, and wins where the two disagree. Chapters follow the navigation rather
-  than the file layout: a spine item holding several navigation entries is split
-  before the block containing each anchor, with the rules for missing, inline
-  and out-of-spine anchors in
-  [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md).
-  Unnavigated documents become untitled chapters, except one the format declares
-  to be the table of contents
-  ([ADR-20260831T184812Z](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md)).
-  The reader also performs the DRM container check — `META-INF/encryption.xml`
-  covering publication resources, or `META-INF/rights.xml` — returning
-  `drmProtected` from both `parse` and `parseMetadata` (`DEC-32`), while a file
-  that only obfuscates fonts parses normally.
-  Roughly 550-600 lines, the largest single piece of work in the feature. `epubx`
-  stays available as a reference implementation to compare against while it is
-  written, and is removed from the dependency list once it is not.
-- `STEP-01b` (`REQ-01`, `DEC-01`, `DEC-12`) — Write the segmenter: terminator and
-  script tables, the false-split suppression rules, the script-transition word
-  rules, and the `TextSegmenter` port with its rule-based default. Patterns live
-  in top-level finals, never instance fields, or the document stops crossing an
-  isolate boundary.
-- `STEP-01c` (`REQ-01`, `DEC-10`) — Emit `ImageBlock` from both readers: FB2
-  `<image>` resolved to `<binary>`, EPUB `img` resolved through the manifest,
-  each with its media type, unresolvable ones skipped.
-- `STEP-01d` (`REQ-01`, `DEC-14`) — Apply the extraction boundary in both
-  readers, against [format-mapping.md](../../engineering/format-mapping.md):
-  tables row by row, lists item by item, line breaks as newlines inside a
-  paragraph rather than as paragraph splits, and FB2 note bodies as trailing
-  chapters. Check the note-bodies rule against what the source FB2 parser does
-  today; if it differs, record the deviation in `brief.md` under `NS-03`. This
-  step also carries the event-based FB2 metadata reader
-  ([ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md)):
-  a `parseEvents` state machine that captures `<description>` and then skips to
-  the single `<binary>` the coverpage names, so `parseMetadata` never builds a DOM
-  over the body. It is a second FB2 reading path beside the DOM one `parse` uses,
-  and the two must agree — which is what `SC-13` now guards rather than merely
-  documents.
-- `STEP-02` (`REQ-02`) — Write `ParseResult<T>` and `ParseFailure` with the five
-  causes — `corrupt`, `unsupportedFormat`, `encoding`, `emptyDocument`,
-  `drmProtected` — and switch the copied code onto them. The set is closed for the
-  major version, so a sixth is a breaking change rather than an addition. Not a dependency on the app's
-  `Result<T>`, and not exceptions on expected errors — the latter would be a
-  regression against current behaviour.
-- `STEP-03` (`REQ-01`) — Build the fixtures: builders in code for the contract
-  tests and for generated corrupt inputs, plus three golden files (EPUB 2 with
-  NCX, EPUB 3 with nav, FB2 in windows-1251) and one illustrated book per format.
-  Two more generated containers are needed and will not come from the corpus,
-  which holds no `encryption.xml` at all: one encrypting a content document and
-  one obfuscating a font.
-  Write the suites from the Test Strategy table. Set up CI — `dart analyze`,
-  `dart test`, `dart pub publish --dry-run` on push. Add the corpus runner
-  alongside the survey scripts in `corpus/`: it parses every local file and
-  reports failures and counts, runs locally rather than in CI because the corpus
-  is `.gitignore`d, and is what makes `STOP-04` a condition rather than a wish.
-  Gate: `CHK-01`, `CHK-07`, evidence `EVID-01`, `EVID-06`, `EVID-08`.
-- `STEP-04` (`REQ-03`) — Verify pure-Dart consumption in a scratch project with
-  no Flutter SDK. Gate: `CHK-02`, evidence `EVID-02`.
-- `STEP-05` (`REQ-01`, `DEC-01`) — Write the README: how the package differs from
-  existing EPUB packages, a usage example, the format support table, the
-  segmentation boundary per writing system, what is **not** extracted from each
-  format, and the isolate guidance for large books. Add `example/main.dart`,
-  which opens a book, prints the contents, and shows `sentences` — the reason
-  people take the package, not just its table of contents. Document every public
-  API element; pub.dev scores the proportion that carry doc comments. Then
-  `dart pub publish --dry-run` and fix what it reports. Gates: `CHK-04`,
-  `CHK-05`.
-- `STEP-06` (`REQ-01`) — Publish. Evidence `EVID-04`.
+  Gate: `CHK-03` — green, the grep over `lib/` returns nothing.
+- `STEP-01a` (`REQ-01`, `DEC-02`, `DEC-16`) — **Done 2026-09-01.** The EPUB
+  reader was written as four units under `lib/src/epub/`: container lookup with
+  the DRM declaration check (`DEC-32`), OPF metadata/manifest/spine/guide, NCX
+  and EPUB 3 nav, and chapter XHTML to blocks with anchor tracking. Navigation
+  supplies `Chapter.title` and `level`; spine supplies reading order and wins
+  where the two disagree. Splitting rules 1–9 of
+  [ADR-20260831T173725Z](../../adr/ADR-20260831T173725Z-chapter-per-navigation-entry.md)
+  and the declared-contents-page exception of
+  [ADR-20260831T184812Z](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md)
+  are implemented and unit-tested; on the corpus the reader reproduces the
+  ADR-predicted counts exactly (*Witchy Eye* 36, *Leaves of Grass* 718).
+  `epubx` was never added as a dependency. One find the corpus made that no
+  fixture could: XHTML `<title/>` self-closing in a chapter head swallows the
+  whole body under HTML parsing rules — 165 of the 178 local files do it — so
+  raw-text elements are expanded before the HTML parser runs.
+- `STEP-01b` (`REQ-01`, `DEC-01`, `DEC-12`) — **Done 2026-09-01.** The segmenter
+  ships as `lib/src/segmentation/`: terminator and script tables
+  (`script_rules.dart`), the three rule layers of
+  [ADR-20260831T134925Z](../../adr/ADR-20260831T134925Z-script-driven-segmentation.md)
+  in `RuleBasedSegmenter`, and the `TextSegmenter` port. Patterns live in
+  top-level finals, never instance fields, and the isolate-transport test parses
+  with a caller-supplied segmenter through `Isolate.run`.
+- `STEP-01c` (`REQ-01`, `DEC-10`) — **Done 2026-09-01.** Both readers emit
+  `ImageBlock` with media types: FB2 `<image>` resolved to `<binary>`, EPUB
+  `img` and SVG-wrapped `image` resolved through the manifest (media type from
+  the manifest entry, extension-guessed otherwise), unresolvable ones skipped.
+- `STEP-01d` (`REQ-01`, `DEC-14`) — **Done 2026-09-01.** The extraction boundary
+  of [format-mapping.md](../../engineering/format-mapping.md) is applied in both
+  readers, including FB2 note bodies as trailing chapters and body-level content
+  outside sections preserved as a preamble chapter. The event-based FB2 metadata
+  reader ([ADR-20260901T101900Z](../../adr/ADR-20260901T101900Z-streaming-fb2-metadata.md))
+  is a `parseEvents` state machine with the order-agnostic second pass
+  (`DEC-27`); the work assertion is structural — a fixture whose body is
+  malformed after the cover binary passes `parseMetadata` and fails `parse`.
+- `STEP-02` (`REQ-02`) — **Done 2026-09-01.** `ParseResult<T>`/`ParseOk`/`ParseErr`
+  and `ParseFailure` with the five closed causes are in `lib/src/parse_result.dart`;
+  all parser paths return them and never throw on expected failures. The one
+  deliberate throw is `ArgumentError` on a `fallbackLanguageCode` outside
+  ISO-639-1 (`DEC-28`), asserted by test.
+- `STEP-03` (`REQ-01`) — **Done 2026-09-01.** Fixtures: in-code builders
+  (`test/support/builders.dart`) for EPUB 2/3 and FB2 plus generated corrupt and
+  DRM inputs (content encryption, font obfuscation, image-only encryption,
+  rights.xml — none existed in any corpus file); three golden files behind
+  `.pubignore` (`alice-epub2-ncx.epub`, `sanzijing-epub3-nav.epub`,
+  `chekhov-cp1251.fb2`, ~350 KB total, past the 150 KB budget). 139 tests across
+  twelve suites cover the Test Strategy table; `SC-10` is asserted with a read
+  probe on the EPUB container and structurally for FB2. CI
+  (`.github/workflows/ci.yaml`) runs `dart analyze --fatal-infos`, `dart test`,
+  `dart pub publish --dry-run`. The corpus runner is
+  `corpus/parse_corpus.dart`; run over 652 files (178 local EPUB in
+  `~/Downloads`, 11 fetched EPUB, 247 FB2 under `~/Documents/docs/shared/books`
+  plus the 5 derived fixtures): **652 ok, 0 errors, 0 throws, 0 metadata-path
+  mismatches**; report at `corpus/parse_report.json`. `STOP-04` was exercised
+  for real: before the `<title/>` fix the whole `.fb2.epub` producer (172
+  files) failed as `emptyDocument`. Gates: `CHK-01` green, `CHK-07` green;
+  evidence `EVID-01`, `EVID-08` on disk, `EVID-06` pending the first push.
+- `STEP-04` (`REQ-03`) — **Done 2026-09-01.** A scratch pure-Dart project
+  (pubspec depending on the package by path, one consuming test) resolves and
+  passes `dart test` with no `flutter` package anywhere in the resolved tree.
+  Gate: `CHK-02` green, evidence `EVID-02` captured in the session log.
+- `STEP-05` (`REQ-01`, `DEC-01`) — **Done 2026-09-01.** README written against
+  `CHK-05`: differentiation, usage, the format support table from
+  format-mapping, the per-writing-system segmentation table, what is not
+  extracted, isolate guidance, and the two-part caching example.
+  `example/main.dart` opens a book, prints the contents, and shows `sentences`.
+  Every exported API element carries a doc comment (verified with
+  `public_member_api_docs`). `dart pub publish --dry-run` passes with one
+  advisory warning — no `homepage`/`repository` field, because the package has
+  no public repository URL yet; the field must be added before `STEP-06`.
+  Gates: `CHK-04` green (modulo that advisory), `CHK-05` written and reviewed
+  against `DEC-01` and format-mapping.
+
+- `STEP-06` (`REQ-01`) — Publish. Evidence `EVID-04`. Before publishing: add the
+  `repository` field to `pubspec.yaml` once the public repository exists, and
+  re-confirm the name is free (`OQ-02`).
 - `STEP-07` (`REQ-04`) — Switch TeaderBook onto the published package and delete
   its copies: `lib/src/data/book_parsing/`, the two model files, the port, the
   segmenter, and `book_document_codec.dart`. The app-side work the accepted

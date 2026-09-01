@@ -2,10 +2,10 @@
 title: New-Format Candidates Against The 0.1.0 Surfaces
 doc_kind: engineering
 doc_function: canonical
-purpose: 'Read when a new book format is proposed: what MOBI/AZW3, TXT, FB3, CBZ and PDF each cost against the surfaces frozen at 0.1.0, assessed 2026-09-01.'
+purpose: 'Read when a new book format is proposed: what MOBI/AZW3, TXT, FB3, CBZ and PDF each cost against the surfaces frozen at 0.1.0, assessed 2026-09-01. Deferred by decision (2026-09-01): no new format lands before roughly five releases past 0.1.0.'
 derived_from:
   - ../adr/ADR-20260830T161443Z-single-document-model.md
-status: draft
+status: active
 ---
 # New-Format Candidates Against The 0.1.0 Surfaces
 

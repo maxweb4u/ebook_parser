@@ -56,6 +56,16 @@ surface. Automated coverage is required for:
 CI runs `dart analyze`, `dart test`, and `dart pub publish --dry-run` on every
 push. All three are required to pass.
 
+- **Structural edge cases, adversarially.** A green corpus run proves producer
+  coverage, not structural correctness: seven adversarial review passes on
+  2026-09-01 fixed ~20 confirmed bugs after acceptance while the 636-book corpus
+  stayed green through every one of them (yield 4 → 7 → 7 → 3 → 2 → 1 → 0,
+  stopping at the first clean pass). The probes that pay are contract-driven:
+  self-closing elements, nested same-name elements, namespace prefixes,
+  duplicate ids, minified markup — and the FB2 `parse`/`parseMetadata` parity
+  contract is the single highest-yield place to point them. Every find is
+  pinned in `test/regression_fixes_test.dart`.
+
 ## What Is Verified Manually
 
 - **Corpus behaviour.** Running the reader across a collection of real books and
