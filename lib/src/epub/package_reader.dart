@@ -81,7 +81,7 @@ OpfPackage readOpf(String xml, String opfPath) {
   final authors = <String>[];
   String? language;
   String? metaCoverId;
-  for (final metadata in root.findElements('metadata', namespace: '*')) {
+  for (final metadata in root.findElements('metadata', namespaceUri: '*')) {
     for (final child in metadata.childElements) {
       final text = _normalize(child.innerText);
       switch (child.name.local) {
@@ -102,8 +102,8 @@ OpfPackage readOpf(String xml, String opfPath) {
   }
 
   final manifestById = <String, ManifestItem>{};
-  for (final manifest in root.findElements('manifest', namespace: '*')) {
-    for (final item in manifest.findElements('item', namespace: '*')) {
+  for (final manifest in root.findElements('manifest', namespaceUri: '*')) {
+    for (final item in manifest.findElements('item', namespaceUri: '*')) {
       final id = item.getAttribute('id');
       final href = item.getAttribute('href');
       if (id == null || href == null) continue;
@@ -122,9 +122,9 @@ OpfPackage readOpf(String xml, String opfPath) {
 
   final spineIdrefs = <String>[];
   String? spineTocId;
-  for (final spine in root.findElements('spine', namespace: '*')) {
+  for (final spine in root.findElements('spine', namespaceUri: '*')) {
     spineTocId = spine.getAttribute('toc');
-    for (final itemref in spine.findElements('itemref', namespace: '*')) {
+    for (final itemref in spine.findElements('itemref', namespaceUri: '*')) {
       // linear="no" is deliberately ignored: the item is a chapter in spine
       // order like any other.
       final idref = itemref.getAttribute('idref');
@@ -134,8 +134,8 @@ OpfPackage readOpf(String xml, String opfPath) {
   }
 
   final guide = <GuideReference>[];
-  for (final guideEl in root.findElements('guide', namespace: '*')) {
-    for (final ref in guideEl.findElements('reference', namespace: '*')) {
+  for (final guideEl in root.findElements('guide', namespaceUri: '*')) {
+    for (final ref in guideEl.findElements('reference', namespaceUri: '*')) {
       final type = ref.getAttribute('type');
       final href = ref.getAttribute('href');
       if (type != null && href != null) {

@@ -93,7 +93,7 @@ String? opfPathOf(EpubContainer container) {
   } catch (_) {
     return null;
   }
-  for (final rootfile in document.findAllElements('rootfile', namespace: '*')) {
+  for (final rootfile in document.findAllElements('rootfile', namespaceUri: '*')) {
     final fullPath = rootfile.getAttribute('full-path');
     if (fullPath != null && fullPath.isNotEmpty) {
       return resolveEpubHref('', fullPath);
@@ -131,10 +131,10 @@ bool isDrmProtected(EpubContainer container) {
     return false;
   }
   for (final encrypted
-      in document.findAllElements('EncryptedData', namespace: '*')) {
+      in document.findAllElements('EncryptedData', namespaceUri: '*')) {
     String? algorithm;
     for (final method
-        in encrypted.findAllElements('EncryptionMethod', namespace: '*')) {
+        in encrypted.findAllElements('EncryptionMethod', namespaceUri: '*')) {
       algorithm = method.getAttribute('Algorithm');
       break;
     }
@@ -143,7 +143,7 @@ bool isDrmProtected(EpubContainer container) {
     }
     String? uri;
     for (final ref
-        in encrypted.findAllElements('CipherReference', namespace: '*')) {
+        in encrypted.findAllElements('CipherReference', namespaceUri: '*')) {
       uri = ref.getAttribute('URI');
       break;
     }

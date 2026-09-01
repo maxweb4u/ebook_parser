@@ -20,7 +20,7 @@ dependencies:
   enough_convert: ^1.6.0
   html: ^0.15.4
   path: ^1.9.0
-  xml: ^6.5.0
+  xml: ^7.0.0
 
 dev_dependencies:
   lints: ^5.0.0

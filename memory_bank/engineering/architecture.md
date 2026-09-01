@@ -161,6 +161,7 @@ affects the package's pub points.
 | --- | --- | --- |
 | `name` | `ebook_parser` | [ADR-20260830T161251Z](../adr/ADR-20260830T161251Z-package-name-ebook-parser.md) |
 | `version` | `0.1.0` | Below 1.0.0 breaking changes are expected, and there will be some — the EPUB reader and the segmenter are both new code |
+| `repository` | `https://github.com/maxweb4u/ebook_parser` | Not optional in practice: without it, or a `homepage`, the publish dry run warns — and a warning here is a failed build, see below |
 | `environment: sdk` | the lowest bound that compiles, expected around `^3.0.0` | Sealed classes and pattern matching need Dart 3; nothing here needs more. A higher bound copied from a consuming app would exclude users for no reason |
 | `description` | 60-180 characters | Outside that range pub.dev deducts points |
 | `topics` | `epub`, `fb2`, `ebook`, `parser`, `reader` | How the package is found by search; five is the maximum |
@@ -175,6 +176,14 @@ comments, and the exported surface here is small enough to cover completely.
 CI runs `dart analyze`, `dart test`, and `dart pub publish --dry-run` on every
 push. For a package other people install, "it worked on my machine" is not a
 state worth reaching.
+
+The third of those has no severity below fatal: `dart pub publish --dry-run`
+exits **65** on a *warning*, exactly as it does on an error. A dry-run advisory
+is therefore a red build, which is what the missing `repository` field was from
+the first push until 2026-09-01 — `analyze` and `test` green the whole time,
+and only the last step failing. Check it by running the command bare: piped
+into `tail` or `grep`, the shell reports the pipe's exit status and the failure
+reads as a mere warning.
 
 ## Repository Naming
 

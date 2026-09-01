@@ -436,7 +436,7 @@ The dependency set after the extraction decisions:
 | Package | Why |
 | --- | --- |
 | `archive` (major 4) | zip: EPUB containers and `.fb2.zip` |
-| `xml` | FB2, OPF, NCX, container |
+| `xml` (major 7) | FB2, OPF, NCX, container |
 | `path` | extension handling, and — through the `p.url` context only — relative-path resolution inside EPUB ([architecture.md](architecture.md)) |
 | `html` | chapter XHTML, which real books do not guarantee is valid XML |
 | `enough_convert` | windows-1251/1250/1252 and koi8-r/u, without which FB2 from public catalogues is unreadable |
@@ -448,6 +448,31 @@ before any parsing begins — and `ParseErr` is no help once the process is alre
 gone. No guard in `0.1.0`; a caller parsing genuinely hostile input runs the
 parse in an isolate it can kill, which is the same isolate the size of these
 books already justifies.
+
+`xml` was moved to major 7 on 2026-09-01, before publication rather than after.
+A first release has no consumers, so its constraint is the cheapest thing in the
+package to change, while `^6.5.0` would have made `ebook_parser` unresolvable
+for any application already on `xml` 7.
+
+A range spanning both majors is not available, which is worth knowing before
+someone proposes one. Version 7 renamed the named argument on `findElements` and
+`findAllElements` from `namespace:` to `namespaceUri:`, deprecating the old
+spelling rather than removing it — but `namespaceUri` does not exist in 6.x at
+all. So `namespace:` compiles under both and emits `deprecated_member_use` under
+7, which CI's `--fatal-infos` treats as a failure, while `namespaceUri:` is clean
+under 7 and does not compile under 6. There is no third spelling: as long as CI
+runs `--fatal-infos`, the choice is one major or the other. A future session
+proposing a range should first check whether the deprecated spelling was finally
+removed.
+
+The thirteen affected call sites are all in the three EPUB readers. The move was
+verified by re-running the corpus gate — 652 files, no errors — but the check
+that matters is the comparison against the previous report: all 636 files common
+to both runs were identical in result, chapter, block and image counts, title,
+language and cover. A parser change under a new XML major can keep parsing
+everything while quietly restructuring the output, and an error count alone would
+not show it. Keep the previous `corpus/parse_report.json` before re-running the
+gate; the diff is the check.
 
 `epubx` is gone, because the package reads EPUB itself
 ([ADR-20260831T134825Z](../adr/ADR-20260831T134825Z-own-epub-reader.md)), and

@@ -53,7 +53,7 @@ EpubNavigation readNcx(String xml, String ncxDir) {
     for (final child in navPoint.childElements) {
       switch (child.name.local) {
         case 'navLabel':
-          for (final text in child.findElements('text', namespace: '*')) {
+          for (final text in child.findElements('text', namespaceUri: '*')) {
             label = _normalize(text.innerText);
             break;
           }
@@ -75,7 +75,7 @@ EpubNavigation readNcx(String xml, String ncxDir) {
     }
   }
 
-  for (final navMap in document.findAllElements('navMap', namespace: '*')) {
+  for (final navMap in document.findAllElements('navMap', namespaceUri: '*')) {
     for (final navPoint in navMap.childElements) {
       if (navPoint.name.local == 'navPoint') visit(navPoint, 0);
     }
