@@ -1,8 +1,19 @@
 # ebook_parser
 
 Extracting book parsing (EPUB, FB2) out of TeaderBook into a package for pub.dev.
-The plan lives entirely in `memory_bank/` — start with `bank_route`. There is no
-code in this repository yet.
+The plan lives in `memory_bank/` — start with `bank_route`.
+
+`0.1.0` is written and unpublished. The package source is in `lib/`, its suites
+in `test/`, and the corpus runner — which reads a local book collection that is
+`.gitignore`d and must never ship — in `corpus/`. `STEP-01`..`STEP-05` of
+FT-001 are done; what remains is `STEP-06` (publish) and `STEP-07` (switch
+TeaderBook onto the published package and delete its copies). Read the Work
+Order of `features/FT-001-extract-package/implementation-plan.md` before
+touching either.
+
+The exported surface is frozen by twenty-two accepted ADRs. Before changing
+anything a caller can see — the model, `ParseResult`, the failure kinds, the
+encoded json — find the ADR that owns it rather than deciding again.
 
 # Memory bank
 
