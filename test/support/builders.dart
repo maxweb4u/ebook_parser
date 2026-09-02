@@ -279,9 +279,14 @@ String fb2({
 /// UTF-8 FB2 bytes.
 Uint8List fb2Bytes(String document) => Uint8List.fromList(utf8.encode(document));
 
-/// Windows-1251 FB2 bytes (the declaration must already say windows-1251).
+/// Windows-1251 FB2 bytes. The declaration is whatever [document] carries —
+/// the mislabelling tests pass one that says `utf-8` on purpose.
 Uint8List fb2BytesCp1251(String document) =>
     Uint8List.fromList(const Windows1251Codec().encode(document));
+
+/// KOI8-R FB2 bytes, on the same terms as [fb2BytesCp1251].
+Uint8List fb2BytesKoi8r(String document) =>
+    Uint8List.fromList(const Koi8rCodec().encode(document));
 
 /// A `<binary>` element carrying [bytes] as base64.
 String fb2Binary(String id, List<int> bytes, {String contentType = 'image/png'}) =>

@@ -86,6 +86,7 @@ writes or what TeaderBook must be refactored to accept at `STEP-07`:
   an EPUB chapter is a navigation entry, not a spine item. Answers: what the
   `STEP-00b` corpus measured, and how a document is split at its anchors.
 - [`ADR-20260831T184812Z`](../../adr/ADR-20260831T184812Z-unnavigated-spine-items.md) —
+- [`STEP-07 Handoff: Switching TeaderBook Onto ebook_parser`](step-07-teaderbook-handoff.md) — Read as the single input when starting the TeaderBook side of the extraction: a self-contained work order whose reasoning is inline, because the session doing this work cannot reach this bank.
   unnavigated front matter is kept; a declared contents page is not. Answers: why
   the package returns documents the application has never shown.
 

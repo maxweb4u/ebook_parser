@@ -3,17 +3,31 @@
 Extracting book parsing (EPUB, FB2) out of TeaderBook into a package for pub.dev.
 The plan lives in `memory_bank/` — start with `bank_route`.
 
-`0.1.0` is written and unpublished. The package source is in `lib/`, its suites
-in `test/`, and the corpus runner — which reads a local book collection that is
-`.gitignore`d and must never ship — in `corpus/`. `STEP-01`..`STEP-05` of
-FT-001 are done; what remains is `STEP-06` (publish) and `STEP-07` (switch
-TeaderBook onto the published package and delete its copies). Read the Work
-Order of `features/FT-001-extract-package/implementation-plan.md` before
-touching either.
+`0.1.0` is published — pub.dev, 2026-09-01, tagged `v0.1.0` at `75b080f` on
+`main`, 160/160 pub points. TeaderBook runs on it and holds no second copy of
+the parsing code (`STEP-07`, done 2026-09-02 as `FT-043` in *that* repository's
+bank). The package source is in `lib/`, its suites in `test/`, and the corpus
+runner — which reads a local book collection that is `.gitignore`d and must
+never ship — in `corpus/`.
 
-The exported surface is frozen by twenty-two accepted ADRs. Before changing
+`STEP-00`..`STEP-08` of FT-001 are done. What remains:
+
+- **publish `0.1.1`**, which is written and unpublished — the `STEP-08` fix for
+  the mislabelled-FB2-encoding defect the app found;
+- **close FT-001 here**: `CHK-06`, `EVID-05` and `EC-01` are owned by this bank,
+  so finishing the app-side work did not close the feature. Someone has to come
+  back and record it.
+
+Read the Work Order of `features/FT-001-extract-package/implementation-plan.md`
+before touching either.
+
+The exported surface is frozen by twenty-three accepted ADRs. Before changing
 anything a caller can see — the model, `ParseResult`, the failure kinds, the
 encoded json — find the ADR that owns it rather than deciding again.
+
+A defect found by a consumer comes back as a document, not as a workaround on
+their side; that is how the fork this extraction exists to end grows back. The
+package's answer to one lives here.
 
 # Memory bank
 

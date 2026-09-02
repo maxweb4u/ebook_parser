@@ -23,7 +23,12 @@ they are not re-derived at review cost.
   not FB2 knowledge. Neutral units are free to name now and are exactly what
   KF8 (HTML) and TXT (encoding sniffing) would reuse. Internal move, so it can
   also happen after `0.1.0` at no cost — the point is to not entrench the
-  placement.
+  placement. Strengthened 2026-09-02: `fb2_encoding.dart` grew the
+  declaration-versus-bytes recovery of
+  [ADR-20260902T120000Z](../adr/ADR-20260902T120000Z-fb2-encoding-declaration-is-a-hypothesis.md),
+  which is the least FB2-specific code in the file and exactly what a TXT
+  reader would need first. The unit is now worth more factored out than it was
+  when this was written.
 - **`IBookParser` evolution.** It is an `abstract interface class`, so
   consumers implement it (mocks, custom parsers) and a third method is a
   breaking change for them. The obvious v2 capability — lazy / per-chapter

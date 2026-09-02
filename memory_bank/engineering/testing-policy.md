@@ -66,6 +66,19 @@ push. All three are required to pass.
   contract is the single highest-yield place to point them. Every find is
   pinned in `test/regression_fixes_test.dart`.
 
+- **A corpus run is evidence about the property it asserts.** The point above
+  says a green run does not prove structural correctness. 2026-09-02 showed it
+  does not prove *content* correctness either: two fixtures derived to test
+  mislabelled encodings reported `ok` in every run while their whole body was
+  U+FFFD, because the runner asserted `ParseOk` and never looked inside it.
+  `corpus/parse_corpus.dart` now also reports a `GARBLED` count — the share of
+  a parsed document's text that is a replacement character — which is the
+  cheapest invariant that separates "it parsed" from "it is the book". Reasoned
+  through in
+  [processes/a-corpus-run-that-only-asks-whether-it-parsed.md](../processes/a-corpus-run-that-only-asks-whether-it-parsed.md);
+  the rule it generalises to is that a fixture derived to make an outcome
+  distinguishable must be paired with an assertion that distinguishes it.
+
 ## What Is Verified Manually
 
 - **Corpus behaviour.** Running the reader across a collection of real books and

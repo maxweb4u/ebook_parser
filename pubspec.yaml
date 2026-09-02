@@ -2,7 +2,7 @@ name: ebook_parser
 description: >-
   Parse EPUB and FB2 ebooks into one shared document model with lazy
   sentence and word segmentation, metadata-only reads, and .fb2.zip support.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/maxweb4u/ebook_parser
 issue_tracker: https://github.com/maxweb4u/ebook_parser/issues
 topics:

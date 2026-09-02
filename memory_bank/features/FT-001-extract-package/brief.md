@@ -345,6 +345,17 @@ follow-up. Sequencing lives in [implementation-plan.md](implementation-plan.md).
   Closes `OQ-27`; recorded as an amendment to
   [ADR-20260901T101600Z](../../adr/ADR-20260901T101600Z-parse-failure-kinds-closed-at-five.md)
   and in [public-api.md](../../engineering/public-api.md).
+- `DEC-33` **Settled 2026-09-02** — an FB2 prolog declaring `utf-8`, and the
+  absence of any declaration, are a hypothesis the bytes may contradict: a
+  lenient decode that comes back mostly U+FFFD is retried as windows-1251 and
+  koi8-r rather than returned as a successful parse of replacement characters.
+  Recovery was chosen over refusing the file with `ParseFailureKind.encoding`,
+  because mislabelled FB2 is common in public catalogues and refusing it would
+  refuse books a competitor opens. The first decision on this list not opened
+  by a review of our own documents — it came back from a consumer running the
+  published package. Recorded in
+  [ADR-20260902T120000Z](../../adr/ADR-20260902T120000Z-fb2-encoding-declaration-is-a-hypothesis.md)
+  and in [format-mapping.md](../../engineering/format-mapping.md).
 
 ## Verify
 
