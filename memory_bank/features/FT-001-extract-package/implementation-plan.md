@@ -104,19 +104,18 @@ needs deliberately corrupt inputs, which do not exist today.
 
 ## Open Questions
 
-| ID | Question | Why unresolved | Blocks | Default action |
-| --- | --- | --- | --- | --- |
-| `OQ-02` | Is `ebook_parser` still free on pub.dev at publish time? | Checked twice on 2026-08-31 and again on 2026-09-01: `GET /api/packages/ebook_parser` returns 404, and a search for the name returns eight packages, none of them it. Free, but pub.dev does not reserve names (`CON-01`), so the answer holds for today and not for publication day | `STEP-06` | `dart pub publish --dry-run` in `STEP-05` re-confirms; a taken name reopens [ADR-20260830T161251Z](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md). |
+None. `OQ-02` was the last one, and `STEP-06` closed it on 2026-09-01 by
+taking the name.
 
-Confirmed 2026-08-31 against pub.dev's own policy: there is no reservation
-mechanism at all, and publishing a placeholder to hold the name is prohibited
-outright — "Packages may not be published solely to reserve a name for future
-use." So the only instrument that would close `OQ-02` early is bringing
-`STEP-06` forward onto a genuinely working `0.1.0`, which the Ordering
-Constraints currently forbid. Left as it is by decision; the question is
-recorded, not acted on.
+The reasoning that kept it open until publication day is kept here, because it
+applies to any name this project ever picks. Confirmed 2026-08-31 against
+pub.dev's own policy: there is no reservation mechanism at all, and publishing
+a placeholder to hold a name is prohibited outright — "Packages may not be
+published solely to reserve a name for future use." So the only instrument that
+could ever have closed `OQ-02` early was publishing a genuinely working
+`0.1.0`, which is exactly how it did close.
 
-This is again the only open question left. `OQ-26`, opened on 2026-09-01 by a
+Everything else is in the Closed table below. `OQ-26`, opened on 2026-09-01 by a
 third review pass that read the chapter-splitting rules against the
 empty-chapter rule, was settled the same day as `DEC-31`; `OQ-27`, opened by a
 fifth pass that walked usage scenarios end to end, closed as `DEC-32`. Seven more
@@ -134,6 +133,7 @@ settled.
 | ID | Question | Answer |
 | --- | --- | --- |
 | `OQ-01` | Segmenter scope | Expanded script-driven rules plus a replaceable port: [ADR-20260831T134925Z](../../adr/ADR-20260831T134925Z-script-driven-segmentation.md). |
+| `OQ-02` | Is the name still free at publish time? | It was. `ebook_parser 0.1.0` was published 2026-09-01 at 16:23:53 UTC, so the name is now held rather than merely free, and [ADR-20260830T161251Z](../../adr/ADR-20260830T161251Z-package-name-ebook-parser.md) stands without the reopening clause. |
 | `OQ-03` | EPUB backend | The package reads EPUB itself in `0.1.0`; `epubx` is not a dependency: [ADR-20260831T134825Z](../../adr/ADR-20260831T134825Z-own-epub-reader.md). `archive` moves to major 4. |
 | `OQ-04` | Language resolution | Full ISO-639-1, narrowing is the caller's: [ADR-20260831T135025Z](../../adr/ADR-20260831T135025Z-language-resolution.md). |
 | `OQ-05` | Cover handling | Stored bytes plus media type, never re-encoded; `image` dropped: [ADR-20260831T135125Z](../../adr/ADR-20260831T135125Z-raw-cover-bytes.md). |
@@ -292,11 +292,52 @@ settled.
   Gates: `CHK-04` green (modulo that advisory), `CHK-05` written and reviewed
   against `DEC-01` and format-mapping.
 
-- `STEP-06` (`REQ-01`) — Publish. Evidence `EVID-04`. Before publishing: add the
-  `repository` field to `pubspec.yaml` once the public repository exists, and
-  re-confirm the name is free (`OQ-02`).
-- `STEP-07` (`REQ-04`) — Switch TeaderBook onto the published package and delete
-  its copies: `lib/src/data/book_parsing/`, the two model files, the port, the
+- `STEP-06` (`REQ-01`) — **Done 2026-09-01.** `ebook_parser 0.1.0` is on
+  pub.dev, published at 16:23:53 UTC from commit `75b080f`:
+  https://pub.dev/packages/ebook_parser/versions/0.1.0 (`EVID-04`). The two
+  pre-publication conditions were met rather than waived — `repository` points
+  at https://github.com/maxweb4u/ebook_parser, which also turned `CHK-04` from
+  a standing advisory into a passing gate and CI from red to green (`EVID-06`),
+  and the name was free at publication, closing `OQ-02`. The published pubspec
+  carries `xml: ^7.0.0`, moved off major 6 the same day for the reason recorded
+  in [public-api.md](../../engineering/public-api.md).
+
+  Both loose ends this step left open were closed on 2026-09-02, and this
+  paragraph used to say they were not:
+
+  - **The score.** pana runs minutes after publication, so it could not be part
+    of the step. Checked: **160/160**, a perfect score — 30/30 conventions,
+    20/20 documentation (all 101 public API elements documented, example
+    package present), 20/20 platform support (all six platforms, WASM-ready),
+    50/50 static analysis, 40/40 up-to-date dependencies. Published under the
+    verified publisher `maxesoft.com`. The manual review of the rendered page
+    that [testing-policy.md](../../engineering/testing-policy.md) requires
+    "once, before the first publication" was carried out by the author.
+  - **The tag.** `v0.1.0` exists and points at `75b080f`, the published commit,
+    on `main`. The version on pub.dev and the tree it was built from are linked
+    by the repository itself, not by this note.
+- `STEP-07` (`REQ-04`) — **Executed on the app side 2026-09-02**, from
+  [step-07-teaderbook-handoff.md](step-07-teaderbook-handoff.md), as
+  `FT-043-ebook-parser-switch` in TeaderBook's own bank. The app runs on the
+  published package and holds no second copy. Verified on a device against the
+  package's own corpus: both formats, `.fb2.zip`, Arabic, Japanese, Chinese, a
+  commercial Baen EPUB, *War and Peace*, and a codec round trip of a 116-page
+  book in 34 ms. Two findings came back rather than being worked around —
+  `D-1`, a package defect, fixed here as `STEP-08`; and `D-2`, three errors in
+  the handoff itself, corrected in place the same day.
+
+  Not yet closed by this: `CHK-06`, `EVID-05` and `EC-01` are owned by this
+  bank, so FT-001 stays open until the app-side evidence is recorded here. The
+  brief's acceptance criteria are the checklist for that return trip.
+
+  What follows is this plan's own record of scope; the handoff is the
+  authority on how it was done. The work ran in a session rooted at the app,
+  which can reach neither
+  this bank nor the `DEC-*` identifiers below; the handoff carries the same
+  requirements with every reason stated inline, and its inventory was
+  re-verified on 2026-09-01 rather than inherited from Current State above.
+  What follows stays as this plan's own record of scope. Switch TeaderBook onto
+  the published package and delete its copies: `lib/src/data/book_parsing/`, the two model files, the port, the
   segmenter, and `book_document_codec.dart`. The app-side work the accepted
   decisions imply, none of it optional:
   - a reader-layer wrapper type carrying the `ParagraphBlock` with its
@@ -345,6 +386,58 @@ settled.
     major (`DEC-02`).
 
   Gate: `CHK-06`, evidence `EVID-05`.
+
+- `STEP-08` (`REQ-01`, `DEC-33`) — **Done 2026-09-02.** Fix the one package
+  defect `STEP-07` sent back. `D-1`: an FB2 whose prolog declares `utf-8` over
+  legacy Cyrillic bytes — or declares nothing — returned `ParseOk` with title,
+  chapter titles and body replaced by U+FFFD, because `allowMalformed: true`
+  substitutes rather than throws and every single-byte Cyrillic character is
+  invalid UTF-8. Recovery rather than refusal, on the reasoning in
+  [ADR-20260902T120000Z](../../adr/ADR-20260902T120000Z-fb2-encoding-declaration-is-a-hypothesis.md):
+  a lenient decode above 2% replacements is taken as evidence against the
+  declaration, and the bytes are retried as windows-1251 and koi8-r with the
+  mostly-lowercase-Cyrillic candidate winning.
+
+  The step is small; what it says about the process is not. The corpus had
+  carried `Chehov_Palata.cp1251-mislabelled.fb2` and
+  `Chehov_Palata.cp1251-undeclared.fb2` since `STEP-00b`, and both parsed `ok`
+  in every `CHK-07` run — because the runner asserts that a file parses, not
+  that what comes out is a book. Five review passes, 168 tests and 652 corpus
+  files did not find it; one afternoon of a real consumer on a real device did.
+  Recorded in
+  [processes/a-corpus-run-that-only-asks-whether-it-parsed.md](../../processes/a-corpus-run-that-only-asks-whether-it-parsed.md).
+
+  Four tests now name those two cases plus a mislabelled koi8-r and a genuine
+  UTF-8 file with a damaged run that must *not* be re-decoded. Corpus re-run:
+  652 files, 0 errors, exactly two rows changed and both now correct. Ships as
+  `0.1.1`; publication of that version is the one thing this step leaves open.
+
+  **Device-verified 2026-09-03** on the RMX3363 that found the defect, through
+  TeaderBook's real import path — its `pubspec.yaml` takes the package by
+  `path:`, so the app builds straight against this tree. The app's own suite is
+  green against `0.1.1` (375 tests, `flutter analyze` clean). On the device,
+  in one library screen:
+
+  - the mislabelled cp1251 file, re-imported, reads `Палата № 6` / `Антон
+    Павлович Чехов`, opens to 161 pages of correct Russian, and a tap resolves
+    a whole sentence bounded at its full stop — segmentation works on recovered
+    text, not just decoding;
+  - the mislabelled koi8-r file reads `Палата No. 6`, which is the *right*
+    answer: koi8-r has no code point for `№`, so the source itself spells it
+    "No.". Had the case heuristic fallen through to windows-1251 the title
+    would have come back as capitals, so this row is the discriminator's
+    on-device assertion;
+  - the record imported before the fix still reads `������ ��6`, untouched.
+    Correct — the library stores parsed records and does not re-parse. Worth
+    knowing before anyone reads a stale card as a failed fix: a consumer
+    carrying books imported under `0.1.0` needs a re-import or a parse-cache
+    bump to benefit, and nothing in the package can do that for them.
+
+  One thing the exercise surfaced that is not a defect: the app deduplicates an
+  import by file content, so re-importing the *same bytes* after the fix does
+  nothing at all. The verification had to append trailing whitespace to change
+  the hash. That is the app's behaviour and correct for it; it is recorded here
+  only because it will waste the next person's afternoon otherwise.
 
 ## Ordering Constraints
 

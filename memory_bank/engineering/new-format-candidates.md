@@ -42,3 +42,33 @@ onto the three `Block` variants; chapters definable; five failure kinds
 suffice; container fits `ArchiveContent`; producer corpus collected before the
 reader is written) — it turns the single-model ADR's procedural mitigation
 into something enforceable.
+
+## The Demand For This Lives In TeaderBook's Bank
+
+Reconciled 2026-09-02. TeaderBook carries `FT-038-more-book-formats`
+(`delivery_status: next_version`, priority medium), scoped to `.mobi`, `.azw3`
+and `.txt` — the same three this document assesses first, reached
+independently and with no reference either way.
+
+The two do not disagree on the analysis. What the overlap actually exposes is
+that **`FT-038` can no longer be executed where it is written.** It was split
+out of `FT-019` on 2026-08-12, when parsing lived in the app, and it still says
+"format branching stays in the parser factory (FT-001)" — meaning the app's
+factory, in the app's `FT-001`, which is a different feature from this bank's
+`FT-001` and no longer holds any parser. After `STEP-07` a new book format is a
+change to `ebook_parser` and to nothing else.
+
+So the ownership split, going forward:
+
+- **Here.** The parser, the format-admission gate above, and the deferral: no
+  new format before roughly five releases past `0.1.0`. `FT-038` is a demand
+  signal against that queue, not a competing plan.
+- **In TeaderBook.** Whatever a new format costs the *consumer* — a file-picker
+  extension, a localised string for a failure kind, an import path — which is
+  small and only becomes real once the package ships the format.
+
+`FT-038` is therefore blocked on this queue rather than open, and its scope
+narrows to the consumer half. Recorded on the app side 2026-09-03: its brief
+carries the split above, its `delivery_status` moved from `next_version` to
+`blocked`, and the stale line pointing at a parser factory the app no longer
+has is gone. Both banks now say the same thing and each names the other.

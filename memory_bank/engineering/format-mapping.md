@@ -154,6 +154,15 @@ FB2 encoding is resolved from the XML prolog before parsing, with
 `enough_convert` covering windows-1251/1250/1252 and koi8-r/u — without which FB2
 from public catalogues is unreadable ([public-api.md](public-api.md)).
 
+A declaration of `utf-8`, and the absence of any declaration, are treated as a
+hypothesis rather than a fact: when the lenient UTF-8 decode comes back mostly
+U+FFFD the bytes are retried as windows-1251 and koi8-r, and the candidate
+whose Cyrillic is mostly lowercase wins
+([ADR-20260902T120000Z](../adr/ADR-20260902T120000Z-fb2-encoding-declaration-is-a-hypothesis.md)).
+A *declared but unsupported* encoding is still refused as
+`ParseFailureKind.encoding`; only the unsupported-by-declaration case fails,
+never the unsupported-by-contradiction one.
+
 ## Where The Two Formats Differ
 
 Deliberate asymmetries, each because the formats carry different information.

@@ -265,4 +265,84 @@ void main() {
       );
     });
   });
+
+  // D-1: a lenient UTF-8 decode of legacy Cyrillic bytes succeeds while
+  // replacing every letter, so the book came back as ParseOk with a body of
+  // U+FFFD. Recovery is by decode, not by declaration; the three corpus
+  // variants these mirror had no test naming them.
+  group('a UTF-8 declaration that the bytes contradict', () {
+    test('windows-1251 bytes labelled utf-8 are recovered', () async {
+      final bytes = fb2BytesCp1251(_russianFb2());
+      final doc = await parseFb2Bytes(bytes);
+      expect(doc.metadata.title, _russianTitle);
+      expect(_textOf(doc), contains(_russianOpening));
+      expect(_textOf(doc), isNot(contains('\uFFFD')));
+    });
+
+    test('windows-1251 bytes with no declaration at all are recovered',
+        () async {
+      final bytes = fb2BytesCp1251(_undeclared(_russianFb2()));
+      final doc = await parseFb2Bytes(bytes);
+      expect(doc.metadata.title, _russianTitle);
+      expect(_textOf(doc), isNot(contains('\uFFFD')));
+    });
+
+    test('koi8-r bytes labelled utf-8 are recovered as koi8-r, not cp1251',
+        () async {
+      final bytes = fb2BytesKoi8r(_russianFb2());
+      final doc = await parseFb2Bytes(bytes);
+      // Read through windows-1251 the same bytes decode without a single
+      // replacement character, so only the case heuristic separates them:
+      // the wrong codec would have returned the title in capitals.
+      expect(doc.metadata.title, _russianTitle);
+      expect(_textOf(doc), contains(_russianOpening));
+    });
+
+    test('genuine utf-8 with a damaged run keeps its lenient decode', () async {
+      // The recovery must not fire on a real UTF-8 file that lost a few
+      // bytes: re-reading it as windows-1251 would turn a book with three
+      // broken characters into a book of mojibake.
+      final bytes = fb2Bytes(_russianFb2()).toList();
+      for (final at in [bytes.length ~/ 2, bytes.length ~/ 2 + 1]) {
+        bytes[at] = 0xC3;
+      }
+      final doc = await parseFb2Bytes(bytes);
+      expect(doc.metadata.title, _russianTitle);
+      expect(_textOf(doc), contains(_russianOpening));
+      expect(_textOf(doc), contains('\uFFFD'));
+    });
+  });
 }
+
+// No `№`: koi8-r has no code point for it, and the fixture has to survive
+// every codec the recovery may pick.
+const _russianTitle = 'Палата номер шесть';
+const _russianOpening = 'В больничном дворе стоит небольшой флигель';
+
+/// A Russian FB2 long enough that a wrong decode is unmistakable: the damage
+/// ratio has to clear the threshold by a wide margin for the test to be
+/// measuring the rule rather than the fixture's length.
+String _russianFb2() {
+  const paragraph = '<p>В больничном дворе стоит небольшой флигель, окружённый '
+      'целым лесом репейника, крапивы и дикой конопли. Крыша на нём ржавая, '
+      'труба наполовину обвалилась, ступеньки у крыльца сгнили и поросли '
+      'травою, а от штукатурки остались одни только следы.</p>';
+  return fb2(
+    bookTitle: _russianTitle,
+    lang: 'ru',
+    bodiesXml: '<body><section>${paragraph * 5}</section></body>',
+  );
+}
+
+/// Strips the `encoding=` pseudo-attribute, leaving a prolog that declares
+/// nothing — the case `_codecForEncoding` also answers UTF-8 for.
+String _undeclared(String document) => document.replaceFirst(
+      '<?xml version="1.0" encoding="utf-8"?>',
+      '<?xml version="1.0"?>',
+    );
+
+String _textOf(BookDocument doc) => doc.chapters
+    .expand((c) => c.blocks)
+    .whereType<ParagraphBlock>()
+    .map((b) => b.text)
+    .join('\n');
